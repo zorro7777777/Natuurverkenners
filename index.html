@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a3a2a">
+<title>Natuurverkenners — Wandelbeheer</title>
+<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --moss:#1a3a2a;--fern:#2d5a3d;--leaf:#4a8c5c;--sage:#7ab892;
+  --mist:#c8ddd0;--cream:#f4f0e8;--stone:#8a8070;
+  --danger:#c0392b;--warn:#e67e22;
+  --shadow:0 4px 24px rgba(26,58,42,.13);--radius:12px;
+  --diff1:#4CAF50;--diff2:#8BC34A;--diff3:#FFC107;--diff4:#FF5722;--diff5:#B71C1C;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--moss);min-height:100vh}
+header{background:var(--moss);height:58px;display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.28)}
+.logo-mark{width:34px;height:34px;background:var(--leaf);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+header h1{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#fff;flex:1;letter-spacing:-.2px}
+header h1 em{color:var(--sage);font-style:italic;font-weight:300}
+.app{display:grid;grid-template-columns:288px 1fr;min-height:calc(100vh - 58px)}
+.sidebar{background:var(--moss);padding:18px 14px;overflow-y:auto;max-height:calc(100vh - 58px);position:sticky;top:58px;display:flex;flex-direction:column;gap:20px}
+.sb-label{font-size:10px;font-weight:500;letter-spacing:1.6px;text-transform:uppercase;color:var(--sage);padding:0 6px;margin-bottom:6px}
+.sb-new-btn{width:100%;background:var(--leaf);border:none;border-radius:9px;padding:11px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.sb-new-btn:hover{background:var(--sage)}
+.wand-item{display:flex;align-items:center;gap:7px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background .15s;color:rgba(255,255,255,.72);font-size:13px;user-select:none}
+.wand-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.wand-item.active{background:var(--fern);color:#fff;font-weight:500}
+.wand-type-pill{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;letter-spacing:.4px;flex-shrink:0}
+.pill-dag{background:rgba(122,184,146,.25);color:var(--sage)}
+.pill-meer{background:rgba(212,160,23,.2);color:#d4a017}
+.wand-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wand-cnt{font-size:10px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.5);padding:1px 6px;border-radius:10px;flex-shrink:0}
+.wand-actions{display:none;gap:2px}
+.wand-item:hover .wand-actions,.wand-item.active .wand-actions{display:flex}
+.wa-btn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.5);font-size:13px;padding:2px 5px;border-radius:4px;transition:color .12s;line-height:1}
+.wa-btn:hover{color:#fff}
+.wa-btn.del:hover{color:#ff7070}
+.sb-reset{background:none;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.35);font-size:11px;padding:5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;text-align:center;margin-top:auto}
+.sb-reset:hover{color:#ff9999;border-color:#ff9999}
+
+/* MAIN */
+.main{padding:28px 32px;overflow-y:auto;position:relative}
+.empty-state{text-align:center;padding:80px 20px;color:var(--stone)}
+.empty-icon{font-size:52px;margin-bottom:16px}
+.empty-state h2{font-family:'Fraunces',serif;font-size:24px;color:var(--fern);margin-bottom:8px}
+.empty-state p{font-size:14px;line-height:1.6}
+
+/* WANDELING OVERZICHT HEADER */
+.wand-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:16px}
+.wand-header-left h2{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--moss);line-height:1.2}
+.wand-meta-row{display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap}
+.type-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;letter-spacing:.3px}
+.badge-dag{background:#e8f5e9;color:#2e7d32}
+.badge-meer{background:#fff8e1;color:#f57f17}
+.wand-stat{font-size:12px;color:var(--stone)}
+.wand-stat strong{color:var(--fern)}
+.wand-desc-display{font-size:13px;color:var(--stone);line-height:1.6;margin:10px 0 20px;max-width:680px}
+.header-actions{display:flex;gap:8px;align-items:flex-start;flex-shrink:0}
+.btn-add{background:var(--fern);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,transform .1s;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn-add:hover{background:var(--leaf);transform:translateY(-1px)}
+.btn-sec{background:none;border:1.5px solid var(--mist);color:var(--stone);border-radius:10px;padding:9px 16px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.btn-sec:hover{border-color:var(--leaf);color:var(--fern)}
+
+/* ── INLINE WANDELING BEWERK PANEEL ── */
+.wand-edit-panel{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden;border-top:3px solid var(--leaf)}
+.wep-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#f8faf9;border-bottom:1px solid var(--mist)}
+.wep-head h3{font-family:'Fraunces',serif;font-size:15px;color:var(--fern);font-weight:600}
+.wep-body{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.wep-full{grid-column:span 2}
+/* Dirty save bar */
+.save-bar{
+  position:sticky;bottom:0;
+  background:rgba(244,240,232,.97);
+  backdrop-filter:blur(10px);
+  border-top:1.5px solid var(--mist);
+  padding:11px 0;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  z-index:50;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s;
+  margin-top:20px;
+}
+.save-bar.visible{opacity:1;pointer-events:auto}
+.save-bar-msg{font-size:12px;color:var(--stone);display:flex;align-items:center;gap:6px}
+.unsaved-dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex-shrink:0;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.save-bar-btns{display:flex;gap:8px}
+.btn-discard{background:none;border:1.5px solid var(--mist);border-radius:8px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;color:var(--stone);transition:all .12s}
+.btn-discard:hover{border-color:var(--stone);color:var(--moss)}
+.btn-save-dirty{background:var(--fern);border:none;border-radius:8px;padding:7px 18px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#fff;cursor:pointer;transition:background .12s}
+.btn-save-dirty:hover{background:var(--leaf)}
+
+/* ETAPPE CARDS */
+.etappes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;margin-bottom:80px}
+.etappe-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column}
+.etappe-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(26,58,42,.18)}
+.card-img-wrap{width:100%;height:155px;overflow:hidden;background:linear-gradient(135deg,var(--mist),#dde8e0);position:relative;flex-shrink:0}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;transition:transform .3s}
+.card-img-wrap:hover img{transform:scale(1.04)}
+.card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px;color:var(--sage)}
+.etappe-num{position:absolute;top:10px;left:10px;background:rgba(26,58,42,.75);color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;backdrop-filter:blur(4px)}
+.card-body{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:6px}
+.card-title{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--moss);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-stats{display:flex;gap:12px;font-size:12px;color:var(--stone)}
+.card-stats strong{color:var(--fern)}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.tag{font-size:10px;padding:2px 7px;border-radius:12px;font-weight:500}
+.tag-hond{background:#fff3e0;color:#e65100}
+.tag-rolstoel{background:#e3f2fd;color:#1565c0}
+.tag-station{background:#f3e5f5;color:#6a1b9a}
+.tag-prikkelarm{background:#e8f5e9;color:#2e7d32}
+.card-desc{font-size:11px;color:var(--stone);line-height:1.5;flex:1}
+.card-footer{display:flex;justify-content:flex-end;gap:6px;padding-top:10px;border-top:1px solid #f0f0f0;margin-top:auto}
+.card-btn{background:none;border:1px solid var(--mist);border-radius:6px;padding:5px 11px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .12s;color:var(--stone)}
+.card-btn:hover{border-color:var(--leaf);color:var(--fern)}
+.card-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.card-btn.fiche{background:var(--fern);color:#fff;border-color:var(--fern)}
+.card-btn.fiche:hover{background:var(--leaf);border-color:var(--leaf)}
+
+/* DIFFICULTY */
+.diff-blocks{display:flex;gap:3px;align-items:center}
+.diff-block{width:16px;height:12px;border-radius:2px;border:1.5px solid rgba(0,0,0,.12);background:#e0e0e0}
+.diff-blocks[data-level="1"] .diff-block:nth-child(-n+1){background:var(--diff1);border-color:var(--diff1)}
+.diff-blocks[data-level="2"] .diff-block:nth-child(-n+2){background:var(--diff2);border-color:var(--diff2)}
+.diff-blocks[data-level="3"] .diff-block:nth-child(-n+3){background:var(--diff3);border-color:var(--diff3)}
+.diff-blocks[data-level="4"] .diff-block:nth-child(-n+4){background:var(--diff4);border-color:var(--diff4)}
+.diff-blocks[data-level="5"] .diff-block:nth-child(-n+5){background:var(--diff5);border-color:var(--diff5)}
+.alpine-pill{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#f3f3f3;color:var(--stone);border:1px solid #ddd}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.6);z-index:200;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:760px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;animation:slideUp .22s ease;flex-shrink:0}
+.wand-modal{max-width:500px}
+@keyframes slideUp{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{background:var(--moss);padding:16px 22px;display:flex;align-items:center;gap:12px}
+.modal-head h3{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#fff;flex:1}
+.modal-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;transition:color .12s}
+.modal-close:hover{color:#fff}
+
+/* MODAL VOET */
+.modal-foot{padding:14px 22px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal-foot-right{display:flex;gap:8px}
+.btn-cancel{background:none;border:1.5px solid var(--mist);border-radius:8px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;color:var(--stone);transition:all .12s}
+.btn-cancel:hover{border-color:var(--stone);color:var(--moss)}
+.btn-save{background:var(--fern);border:none;border-radius:8px;padding:9px 22px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#fff;cursor:pointer;transition:background .12s}
+.btn-save:hover{background:var(--leaf)}
+.btn-save:disabled{background:var(--mist);cursor:not-allowed;color:var(--stone)}
+.modal-dirty-msg{font-size:11px;color:var(--stone);display:flex;align-items:center;gap:5px;opacity:0;transition:opacity .2s}
+.modal-dirty-msg.visible{opacity:1}
+
+/* TABS */
+.tab-bar{display:flex;background:#f0f4f2;border-bottom:2px solid var(--mist);overflow-x:auto;gap:2px;padding:6px 8px 0}
+.tab-btn{padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--stone);background:none;border:none;cursor:pointer;white-space:nowrap;transition:all .15s;border-radius:8px 8px 0 0;border:1.5px solid transparent;border-bottom:none;margin-bottom:-2px;position:relative}
+.tab-btn:hover{color:var(--fern);background:rgba(255,255,255,.6)}
+.tab-btn.active{color:#fff;background:var(--fern);border-color:var(--fern);font-weight:600}
+.tab-btn.dirty::after{content:'●';color:var(--warn);margin-left:4px;font-size:9px;vertical-align:super}
+.tab-pane{display:none;padding:22px}
+.tab-pane.active{display:block}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:span 2}
+.field{display:flex;flex-direction:column;gap:5px}
+.field-label{font-size:11px;font-weight:500;color:var(--stone);text-transform:uppercase;letter-spacing:.8px}
+.field input[type="text"],.field input[type="number"],.field input[type="file"],
+.field textarea,.field select{border:1.5px solid var(--mist);border-radius:8px;padding:9px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--moss);transition:border-color .12s;background:#fff;width:100%}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--leaf)}
+.field input[readonly]{background:#f8faf9;color:var(--fern);font-weight:500;border-color:#d0e8d8}
+.field textarea{resize:vertical;min-height:75px}
+.error-msg{color:var(--danger);font-size:11px;margin-top:3px;display:none}
+.form-section{font-size:11px;font-weight:600;color:var(--fern);text-transform:uppercase;letter-spacing:1px;padding:4px 0 8px;border-bottom:1px solid var(--mist);margin-bottom:12px;grid-column:span 2}
+.type-choice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.type-opt{border:2px solid var(--mist);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s;text-align:center;user-select:none}
+.type-opt:hover{border-color:var(--leaf);background:#f4faf6}
+.type-opt.selected{border-color:var(--leaf);background:#f0f8f3}
+.type-opt .opt-icon{font-size:28px;margin-bottom:6px}
+.type-opt .opt-title{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--moss)}
+.type-opt .opt-sub{font-size:11px;color:var(--stone);margin-top:3px}
+.gpx-stats{display:flex;gap:14px;background:#f4faf6;border-radius:8px;padding:10px 13px;font-size:12px;color:var(--fern);margin-top:4px;flex-wrap:wrap}
+.gpx-stat strong{color:var(--moss);font-weight:600}
+.multi-select{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}
+.ms-pill{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:20px;border:1.5px solid var(--mist);font-size:12px;cursor:pointer;transition:all .12s;user-select:none;color:var(--stone);background:#fff}
+.ms-pill:hover{border-color:var(--leaf);color:var(--fern)}
+.ms-pill.on{background:var(--fern);border-color:var(--fern);color:#fff}
+.bool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;padding:4px 0}
+.bool-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--mist);cursor:pointer;transition:all .12s;user-select:none;font-size:12px;color:var(--moss)}
+.bool-item:hover{border-color:var(--leaf);background:#f8fbf9}
+.bool-item.on{border-color:var(--leaf);background:#f0f8f3;color:var(--fern);font-weight:500}
+.bool-item input[type="checkbox"]{accent-color:var(--leaf);width:14px;height:14px;flex-shrink:0;pointer-events:none}
+.bool-icon{font-size:15px;flex-shrink:0}
+.diff-picker{display:flex;gap:5px;align-items:center}
+.diff-picker-block{width:26px;height:19px;border-radius:4px;border:2px solid #e0e0e0;background:#e0e0e0;cursor:pointer;transition:all .12s}
+.diff-picker-block:hover{transform:scaleY(1.12)}
+.diff-picker-block.a1{background:var(--diff1);border-color:var(--diff1)}
+.diff-picker-block.a2{background:var(--diff2);border-color:var(--diff2)}
+.diff-picker-block.a3{background:var(--diff3);border-color:var(--diff3)}
+.diff-picker-block.a4{background:var(--diff4);border-color:var(--diff4)}
+.diff-picker-block.a5{background:var(--diff5);border-color:var(--diff5)}
+.diff-lbl{font-size:12px;color:var(--stone);margin-left:8px;min-width:80px}
+
+/* FOTO EDITOR */
+.hf-zone{border:2px dashed var(--mist);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:all .15s;background:#fafcfb;position:relative;overflow:hidden}
+.hf-zone:hover,.hf-zone.dragover{border-color:var(--leaf);background:#f0f8f3}
+.hf-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.hf-zone .uz-icon{font-size:26px;margin-bottom:5px}
+.hf-zone .uz-text{font-size:12px;color:var(--stone)}
+.hf-zone .uz-text strong{color:var(--fern)}
+.hf-badge{display:inline-flex;align-items:center;gap:4px;background:#e8f5e9;color:#2e7d32;font-size:10px;padding:2px 8px;border-radius:10px;margin-top:5px;font-weight:500}
+.foto-editor-wrap{display:none;margin-top:10px}
+.foto-editor-wrap.visible{display:block}
+.foto-editor-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.foto-editor-head span{font-size:11px;color:var(--stone);font-weight:500}
+.feh-actions{display:flex;gap:6px}
+.fea-btn{background:none;border:1px solid var(--mist);border-radius:6px;padding:4px 11px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--stone);transition:all .12s}
+.fea-btn:hover{border-color:var(--leaf);color:var(--fern)}
+.fea-btn.primary{background:var(--fern);border-color:var(--fern);color:#fff}
+.fea-btn.primary:hover{background:var(--leaf)}
+.canvas-outer{width:100%;aspect-ratio:16/9;border-radius:8px;overflow:hidden;border:2px solid var(--mist);position:relative;background:#111;cursor:grab;user-select:none}
+.canvas-outer:active{cursor:grabbing}
+.canvas-outer canvas{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+.thirds{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.15) 1px,transparent 1px);background-size:33.333% 33.333%;opacity:0;transition:opacity .2s}
+.canvas-outer:hover .thirds{opacity:1}
+.drag-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:3px 11px;border-radius:20px;pointer-events:none;transition:opacity .4s}
+.drag-hint.hidden{opacity:0}
+.photo-strip{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+.pt-wrap{position:relative;width:68px;height:68px;border-radius:6px;overflow:hidden;border:2px solid var(--mist)}
+.pt-wrap img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
+.pt-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#modalMap{height:190px;border-radius:8px;border:1.5px solid var(--mist);margin-top:4px}
+
+/* CONFIRM */
+/* VERREKIJKER OVERZICHT MODAL */
+.overzicht-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.65);z-index:250;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.overzicht-bg.open{display:flex}
+.overzicht-modal{background:var(--cream);border-radius:16px;width:100%;max-width:820px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;animation:slideUp .22s ease;flex-shrink:0}
+.overzicht-head{background:var(--moss);padding:16px 22px;display:flex;align-items:flex-start;gap:14px}
+.overzicht-head-info{flex:1}
+.overzicht-head-info h2{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#fff;line-height:1.3}
+.overzicht-head-info .oh-meta{display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;align-items:center}
+.oh-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.oh-badge-dag{background:rgba(122,184,146,.3);color:var(--sage)}
+.oh-badge-meer{background:rgba(212,160,23,.25);color:#d4a017}
+.oh-meta-stat{font-size:12px;color:rgba(255,255,255,.6)}
+.oh-meta-stat strong{color:rgba(255,255,255,.9)}
+.overzicht-head .modal-close{color:rgba(255,255,255,.6);font-size:22px;background:none;border:none;cursor:pointer;padding:0 4px;line-height:1;transition:color .12s;flex-shrink:0}
+.overzicht-head .modal-close:hover{color:#fff}
+.overzicht-body{padding:20px;display:flex;flex-direction:column;gap:14px}
+/* Etappe rij in overzicht */
+.ov-etappe{background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(26,58,42,.08);overflow:hidden;display:flex;gap:0}
+.ov-foto{width:130px;height:100px;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,var(--mist),#dde8e0);position:relative}
+.ov-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.ov-foto-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--sage)}
+.ov-num{position:absolute;top:6px;left:6px;background:rgba(26,58,42,.75);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px}
+.ov-info{padding:12px 16px;flex:1;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.ov-naam{font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:var(--moss)}
+.ov-stats{display:flex;gap:10px;font-size:11px;color:var(--stone);flex-wrap:wrap}
+.ov-stats strong{color:var(--fern);font-weight:600}
+.ov-tags{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.ov-tag{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;white-space:nowrap}
+/* Icon-blok rechts in overzicht rij */
+.ov-icons{padding:12px;background:#f8faf9;display:flex;flex-direction:column;justify-content:center;gap:4px;flex-shrink:0;width:120px;border-left:1px solid #f0f0f0}
+.ov-icon-row{display:flex;flex-wrap:wrap;gap:3px}
+.ov-icon{font-size:14px;line-height:1;opacity:.85;cursor:default}
+.ov-icon[title]{cursor:help}
+/* Wandeling beschrijving blok */
+.ov-desc{background:#fff;border-radius:8px;padding:14px 16px;font-size:13px;color:var(--stone);line-height:1.6;border-left:3px solid var(--mist)}
+
+/* CONFIRM */
+.confirm-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.65);z-index:300;align-items:center;justify-content:center}
+.confirm-bg.open{display:flex}
+.confirm-box{background:#fff;border-radius:12px;padding:26px;max-width:350px;width:90%;text-align:center;box-shadow:0 20px 48px rgba(0,0,0,.3);animation:slideUp .18s ease}
+.confirm-box p{color:var(--moss);font-size:14px;margin-bottom:18px;line-height:1.5}
+.confirm-btns{display:flex;gap:10px;justify-content:center}
+.btn-del{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
+.btn-del:hover{background:#a93226}
+.pv-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;align-items:center;justify-content:center;cursor:pointer}
+.pv-bg.open{display:flex}
+.pv-bg img{max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--moss);color:#fff;padding:11px 22px;border-radius:40px;font-size:13px;z-index:400;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:static;max-height:none}
+  .form-grid,.wep-body{grid-template-columns:1fr}
+  .form-full,.form-section,.wep-full{grid-column:span 1}
+  .main{padding:18px 14px}
+  .type-choice{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-mark">🌿</div>
+  <h1>Natuurverkenners &mdash; <em>Wandelbeheer</em></h1>
+</header>
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="sb-label">Wandelingen</div>
+      <button class="sb-new-btn" onclick="openNieuweWandelingModal()">+ Nieuwe wandeling</button>
+    </div>
+    <div style="flex:1">
+      <div class="sb-label">Overzicht</div>
+      <div id="wandelingList"></div>
+    </div>
+    <button class="sb-reset" onclick="wisDatabase()">↺ Reset database</button>
+  </aside>
+  <main class="main" id="mainContent">
+    <div class="empty-state">
+      <div class="empty-icon">🗺️</div>
+      <h2>Welkom bij Natuurverkenners</h2>
+      <p>Voeg je eerste wandeling toe via de knop links.<br>Dagwandeling of meerdaagse — jij kiest.</p>
+    </div>
+  </main>
+</div>
+
+<!-- WANDELING MODAL -->
+<div class="modal-bg" id="wandelingModal">
+  <div class="modal wand-modal">
+    <div class="modal-head">
+      <h3 id="wandModalTitel">Nieuwe wandeling</h3>
+      <button class="modal-close" onclick="sluitWandelingModal()">×</button>
+    </div>
+    <div style="padding:22px;display:flex;flex-direction:column;gap:14px">
+      <div id="typeKeuzeWrap">
+        <div class="field-label" style="margin-bottom:8px">Type wandeling</div>
+        <div class="type-choice">
+          <div class="type-opt" id="optDag" onclick="kiesType('dag')">
+            <div class="opt-icon">🌤️</div>
+            <div class="opt-title">Dagwandeling</div>
+            <div class="opt-sub">Namiddag of volledige dag · 1 etappe</div>
+          </div>
+          <div class="type-opt" id="optMeer" onclick="kiesType('meerdaagse')">
+            <div class="opt-icon">⛺</div>
+            <div class="opt-title">Meerdaagse</div>
+            <div class="opt-sub">Meerdere dagen · meerdere etappes</div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Naam wandeling</div>
+        <input type="text" id="wandNaam" placeholder="bijv. Bosrand Heverlee of GR 5 Ardennen" oninput="wandDirty()">
+      </div>
+      <div class="field">
+        <div class="field-label">Regio / streek</div>
+        <input type="text" id="wandRegio" placeholder="bijv. Ardennen, Kempen, Kust…" oninput="wandDirty()">
+      </div>
+      <div class="field">
+        <div class="field-label">Beschrijving</div>
+        <textarea id="wandBeschrijving" rows="3" placeholder="Korte omschrijving…" oninput="wandDirty()"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-dirty-msg" id="wandDirtyMsg"><span class="unsaved-dot"></span>Niet-opgeslagen wijzigingen</div>
+      <div class="modal-foot-right">
+        <button class="btn-cancel" onclick="sluitWandelingModal()">Annuleren</button>
+        <button class="btn-save" id="wandSaveBtn" onclick="saveWandeling()" disabled>Wandeling opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ETAPPE MODAL -->
+<div class="modal-bg" id="etappeModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="etappeModalTitel">Etappe toevoegen</h3>
+      <button class="modal-close" onclick="sluitEtappeModal()">×</button>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="toonTab(0)">📍 Basis</button>
+      <button class="tab-btn" onclick="toonTab(1)">🗺️ Route</button>
+      <button class="tab-btn" onclick="toonTab(2)">♿ Toegankelijkheid</button>
+      <button class="tab-btn" onclick="toonTab(3)">🧠 Psychisch</button>
+      <button class="tab-btn" onclick="toonTab(4)">🌿 Comfort</button>
+      <button class="tab-btn" onclick="toonTab(5)">📸 Foto's</button>
+      <button class="tab-btn" onclick="toonTab(6)">⚙️ Beheer</button>
+    </div>
+    <!-- TAB 0 -->
+    <div class="tab-pane active" id="tab0">
+      <div class="form-grid">
+        <div class="form-section">Algemeen</div>
+        <div class="field form-full">
+          <div class="field-label">GPX bestand</div>
+          <input type="file" id="gpxInput" accept=".gpx" onchange="verwerkGPX(this);etappeDirty(0)">
+          <div id="gpxError" class="error-msg">Ongeldig GPX-bestand (min. 2 trackpunten vereist).</div>
+          <div class="gpx-stats" id="gpxStats" style="display:none">
+            <span class="gpx-stat">📏 <strong id="statAfstand">—</strong> km</span>
+            <span class="gpx-stat">📍 <strong id="statPunten">—</strong> punten</span>
+            <span class="gpx-stat">⛰️ <strong id="statHoogte">—</strong> m stijging</span>
+            <span class="gpx-stat">📐 <strong id="statStijging">—</strong>% gem.</span>
+            <span class="gpx-stat">⏱️ <strong id="statTijd">—</strong></span>
+          </div>
+        </div>
+        <div class="field form-full">
+          <div class="field-label">Startpunt preview</div>
+          <div id="modalMap"></div>
+        </div>
+        <div class="field">
+          <div class="field-label">Naam etappe</div>
+          <input type="text" id="inpTitel" placeholder="bijv. Dag 1 — Vallei van de Ourthe" oninput="etappeDirty(0)">
+        </div>
+        <div class="field">
+          <div class="field-label">Startadres (automatisch)</div>
+          <input type="text" id="inpAdres" readonly>
+        </div>
+        <div class="field">
+          <div class="field-label">Regio / streek</div>
+          <input type="text" id="inpRegio" oninput="etappeDirty(0)">
+        </div>
+        <div class="field">
+          <div class="field-label">Provincie</div>
+          <input type="text" id="inpProvincie" oninput="etappeDirty(0)">
+        </div>
+        <div class="field form-full">
+          <div class="field-label">Beschrijving etappe</div>
+          <textarea id="inpBeschrijving" placeholder="Bijzonderheden, tips, hoogtepunten…" oninput="etappeDirty(0)"></textarea>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 1 -->
+    <div class="tab-pane" id="tab1">
+      <div class="form-grid">
+        <div class="form-section">Navigatie & type</div>
+        <div class="field form-full">
+          <div class="field-label">Routetype</div>
+          <div class="multi-select">
+            <div class="ms-pill" data-group="routetype" data-val="lus" onclick="togglePill(this);etappeDirty(1)">🔄 Lus</div>
+            <div class="ms-pill" data-group="routetype" data-val="atob" onclick="togglePill(this);etappeDirty(1)">➡️ A naar B</div>
+          </div>
+        </div>
+        <div class="field form-full">
+          <div class="field-label">Navigatiemethode (meerdere mogelijk)</div>
+          <div class="multi-select">
+            <div class="ms-pill" data-group="navigatie" data-val="knooppunten" onclick="togglePill(this);etappeDirty(1)">🔢 Wandelknooppunten</div>
+            <div class="ms-pill" data-group="navigatie" data-val="gr" onclick="togglePill(this);etappeDirty(1)">🔴 Grote Routepad</div>
+            <div class="ms-pill" data-group="navigatie" data-val="gps" onclick="togglePill(this);etappeDirty(1)">📡 GPS</div>
+            <div class="ms-pill" data-group="navigatie" data-val="kaart" onclick="togglePill(this);etappeDirty(1)">🗺️ Kaart</div>
+          </div>
+        </div>
+        <div class="form-section">Moeilijkheid</div>
+        <div class="field form-full">
+          <div class="field-label">Algemene moeilijkheidsgraad</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+            <div class="diff-picker" id="diffPicker">
+              <div class="diff-picker-block" onclick="setDiff(1);etappeDirty(1)"></div>
+              <div class="diff-picker-block" onclick="setDiff(2);etappeDirty(1)"></div>
+              <div class="diff-picker-block" onclick="setDiff(3);etappeDirty(1)"></div>
+              <div class="diff-picker-block" onclick="setDiff(4);etappeDirty(1)"></div>
+              <div class="diff-picker-block" onclick="setDiff(5);etappeDirty(1)"></div>
+            </div>
+            <span class="diff-lbl" id="diffLbl">Niet ingesteld</span>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Alpine schaal (SAC)</div>
+          <select id="inpAlpine" onchange="etappeDirty(1)">
+            <option value="">— Niet van toepassing —</option>
+            <option value="T1">T1 — Wandelen</option>
+            <option value="T2">T2 — Bergtocht</option>
+            <option value="T3">T3 — Veeleisende bergtocht</option>
+            <option value="T4">T4 — Alpiene bergtocht</option>
+            <option value="T5">T5 — Moeilijke alpiene bergtocht</option>
+            <option value="T6">T6 — Zeer moeilijke bergtocht</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Ondergrond</div>
+          <select id="inpOndergrond" onchange="etappeDirty(1)">
+            <option value="">— Kies —</option>
+            <option value="verhard">Verhard</option>
+            <option value="halfverhard">Halfverhard</option>
+            <option value="onverhard">Onverhard</option>
+            <option value="ruig">Ruig / technisch</option>
+            <option value="gemengd">Gemengd</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Padbreedte</div>
+          <select id="inpPadbreedte" onchange="etappeDirty(1)">
+            <option value="">— Kies —</option>
+            <option value="smal">Smal (&lt;1m)</option>
+            <option value="normaal">Normaal (1–2m)</option>
+            <option value="breed">Breed (&gt;2m)</option>
+          </select>
+        </div>
+        <div class="form-section">Seizoen & omgeving</div>
+        <div class="field form-full">
+          <div class="field-label">Beste seizoen</div>
+          <div class="multi-select">
+            <div class="ms-pill" data-group="seizoen" data-val="lente" onclick="togglePill(this);etappeDirty(1)">🌸 Lente</div>
+            <div class="ms-pill" data-group="seizoen" data-val="zomer" onclick="togglePill(this);etappeDirty(1)">☀️ Zomer</div>
+            <div class="ms-pill" data-group="seizoen" data-val="herfst" onclick="togglePill(this);etappeDirty(1)">🍂 Herfst</div>
+            <div class="ms-pill" data-group="seizoen" data-val="winter" onclick="togglePill(this);etappeDirty(1)">❄️ Winter</div>
+          </div>
+        </div>
+        <div class="field form-full">
+          <div class="field-label">Omgevingstype</div>
+          <div class="multi-select">
+            <div class="ms-pill" data-group="omgeving" data-val="bos" onclick="togglePill(this);etappeDirty(1)">🌲 Bos</div>
+            <div class="ms-pill" data-group="omgeving" data-val="heide" onclick="togglePill(this);etappeDirty(1)">🌾 Heide</div>
+            <div class="ms-pill" data-group="omgeving" data-val="kust" onclick="togglePill(this);etappeDirty(1)">🌊 Kust</div>
+            <div class="ms-pill" data-group="omgeving" data-val="rivier" onclick="togglePill(this);etappeDirty(1)">🏞️ Rivier</div>
+            <div class="ms-pill" data-group="omgeving" data-val="berg" onclick="togglePill(this);etappeDirty(1)">⛰️ Berg</div>
+            <div class="ms-pill" data-group="omgeving" data-val="stad" onclick="togglePill(this);etappeDirty(1)">🏘️ Stad/dorp</div>
+            <div class="ms-pill" data-group="omgeving" data-val="polder" onclick="togglePill(this);etappeDirty(1)">🌿 Polder</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 2 -->
+    <div class="tab-pane" id="tab2">
+      <div class="form-grid">
+        <div class="form-section">Fysieke toegankelijkheid</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpRolstoel"><span class="bool-icon">♿</span> Rolstoel</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpRollator"><span class="bool-icon">🦽</span> Rollator</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpKinderwagen"><span class="bool-icon">👶</span> Kinderwagen</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpHond"><span class="bool-icon">🐶</span> Hondvriendelijk</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpVisueel"><span class="bool-icon">👁️</span> Visuele beperking</label>
+          </div>
+        </div>
+        <div class="form-section">Groepsprofiel</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpIndividueel"><span class="bool-icon">🚶</span> Individueel</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpKleineGroep"><span class="bool-icon">👥</span> Kleine groep (≤6)</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpGroteGroep"><span class="bool-icon">👨‍👩‍👧‍👦</span> Grote groep</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Max. groepsgrootte</div>
+          <input type="number" id="inpMaxGroep" min="1" max="100" placeholder="bijv. 12" oninput="etappeDirty(2)">
+        </div>
+        <div class="field">
+          <div class="field-label">Aanbevolen begeleiders</div>
+          <input type="number" id="inpBegeleiders" min="1" max="20" placeholder="bijv. 2" oninput="etappeDirty(2)">
+        </div>
+        <div class="form-section">Vervoer & parking</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpParking"><span class="bool-icon">🅿️</span> Parking aanwezig</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpOV"><span class="bool-icon">🚌</span> OV-vriendelijk</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpBus"><span class="bool-icon">🚐</span> Lage-instap bus</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(2)"><input type="checkbox" id="inpStation"><span class="bool-icon">🚉</span> Stationsstapper</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 3 -->
+    <div class="tab-pane" id="tab3">
+      <div class="form-grid">
+        <div class="form-section">Psychisch profiel</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(3)"><input type="checkbox" id="inpPrikkelarm"><span class="bool-icon">🤫</span> Prikkelarme omgeving</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(3)"><input type="checkbox" id="inpCognitief"><span class="bool-icon">🧩</span> Cognitieve beperking</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(3)"><input type="checkbox" id="inpGedrag"><span class="bool-icon">💚</span> Gedragsmoeilijkheden</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(3)"><input type="checkbox" id="inpRustMomenten"><span class="bool-icon">⏸️</span> Rustmomenten voorzien</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(3)"><input type="checkbox" id="inpVroegtijdig"><span class="bool-icon">🚪</span> Vroegtijdig stoppen mogelijk</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Sociale druk onderweg</div>
+          <select id="inpSociaalDruk" onchange="etappeDirty(3)">
+            <option value="">— Kies —</option>
+            <option value="laag">Laag — rustig, weinig mensen</option>
+            <option value="matig">Matig</option>
+            <option value="hoog">Hoog — drukke plekken</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Voorspelbaarheid route</div>
+          <select id="inpVoorspelbaar" onchange="etappeDirty(3)">
+            <option value="">— Kies —</option>
+            <option value="hoog">Hoog — duidelijk gemarkeerd</option>
+            <option value="matig">Matig</option>
+            <option value="laag">Laag — oriëntatie vereist</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Mentale belasting</div>
+          <select id="inpMentaal" onchange="etappeDirty(3)">
+            <option value="">— Kies —</option>
+            <option value="laag">Laag</option>
+            <option value="matig">Matig</option>
+            <option value="hoog">Hoog</option>
+          </select>
+        </div>
+        <div class="field form-full">
+          <div class="field-label">Notities voor begeleiders</div>
+          <textarea id="inpPsychNotities" placeholder="Aandachtspunten specifiek voor deze doelgroep…" oninput="etappeDirty(3)"></textarea>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 4 -->
+    <div class="tab-pane" id="tab4">
+      <div class="form-grid">
+        <div class="form-section">Comfort onderweg</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpRustbanken"><span class="bool-icon">🪑</span> Rustbanken aanwezig</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpSchaduw"><span class="bool-icon">🌳</span> Schaduw aanwezig</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpToilet"><span class="bool-icon">🚻</span> Toilet onderweg</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpDrinkwater"><span class="bool-icon">💧</span> Drinkwater beschikbaar</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpOverdekt"><span class="bool-icon">⛺</span> Overdekte rustplaats</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpHoreca"><span class="bool-icon">☕</span> Horeca onderweg</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Aantal rustbanken</div>
+          <input type="number" id="inpAantalRust" min="0" placeholder="0" oninput="etappeDirty(4)">
+        </div>
+        <div class="form-section">Veiligheid</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpNooduitgang"><span class="bool-icon">🚨</span> Nooduitgang mogelijk</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(4)"><input type="checkbox" id="inpAED"><span class="bool-icon">❤️‍🩹</span> AED in buurt start</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">GSM-bereik onderweg</div>
+          <select id="inpGSM" onchange="etappeDirty(4)">
+            <option value="">— Kies —</option>
+            <option value="goed">Goed</option>
+            <option value="beperkt">Beperkt</option>
+            <option value="geen">Geen / slecht</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 5 -->
+    <div class="tab-pane" id="tab5">
+      <div class="form-grid">
+        <div class="form-section">Hoofdfoto</div>
+        <div class="field form-full">
+          <div class="field-label">Hoofdfoto <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--stone);font-size:10px">— alleen landscape · gecomprimeerd naar 1280×720</span></div>
+          <div class="hf-zone" id="hfZone">
+            <input type="file" id="hoofdfotoInput" accept="image/*" onchange="verwerkHoofdFoto(this)">
+            <div class="uz-icon">🖼️</div>
+            <div class="uz-text"><strong>Klik of sleep</strong> een foto hierin</div>
+            <div class="hf-badge">↔ Alleen landscape</div>
+          </div>
+          <div id="hfError" class="error-msg"></div>
+          <div class="foto-editor-wrap" id="fotoEditorWrap">
+            <div class="foto-editor-head">
+              <span>Sleep om het gewenste gebied te selecteren</span>
+              <div class="feh-actions">
+                <button class="fea-btn" onclick="resetFotoPos()">↺ Reset</button>
+                <button class="fea-btn" onclick="verwijderHoofdFoto()">✕ Verwijder</button>
+                <button class="fea-btn primary" onclick="bevestigCrop()">✓ Bevestigen</button>
+              </div>
+            </div>
+            <div class="canvas-outer" id="canvasOuter">
+              <canvas id="editorCanvas"></canvas>
+              <div class="thirds"></div>
+              <div class="drag-hint" id="dragHint">↔ Sleep om te verschuiven</div>
+            </div>
+            <div id="cropPreviewWrap" style="display:none;margin-top:10px">
+              <div style="font-size:10px;color:var(--stone);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.8px">Opgeslagen uitsnede</div>
+              <img id="cropPreview" style="width:100%;border-radius:8px;border:2px solid var(--mist);display:block" alt="">
+              <div style="display:flex;justify-content:flex-end;margin-top:5px">
+                <button class="fea-btn" onclick="herOpenEditor()">✎ Aanpassen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">Extra foto's</div>
+        <div class="field form-full">
+          <div class="field-label">Extra foto's (optioneel)</div>
+          <input type="file" id="fotoInput" accept="image/*" multiple onchange="verwerkExtraFotos(this)">
+          <div class="photo-strip" id="photoStrip"></div>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 6 -->
+    <div class="tab-pane" id="tab6">
+      <div class="form-grid">
+        <div class="form-section">Status</div>
+        <div class="field form-full">
+          <div class="bool-grid">
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(6)"><input type="checkbox" id="inpAktief" checked><span class="bool-icon">✅</span> Actief (zichtbaar)</label>
+            <label class="bool-item" onclick="toggleBool(this);etappeDirty(6)"><input type="checkbox" id="inpUitgelicht"><span class="bool-icon">⭐</span> Uitgelicht</label>
+          </div>
+        </div>
+        <div class="form-section">Registratie</div>
+        <div class="field">
+          <div class="field-label">Aangemaakt op</div>
+          <input type="text" id="infoAanmaak" readonly>
+        </div>
+        <div class="field">
+          <div class="field-label">Laatste wijziging</div>
+          <input type="text" id="infoWijziging" readonly>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-dirty-msg" id="etappeDirtyMsg"><span class="unsaved-dot"></span>Niet-opgeslagen wijzigingen</div>
+      <div class="modal-foot-right">
+        <button class="btn-cancel" onclick="sluitEtappeModal()">Annuleren</button>
+        <button class="btn-save" id="saveEtappeBtn" onclick="saveEtappe()" disabled>Etappe opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERZICHT MODAL (verrekijker) -->
+<div class="overzicht-bg" id="overzichtBg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="overzicht-modal">
+    <div class="overzicht-head">
+      <div class="overzicht-head-info">
+        <h2 id="ovTitel">—</h2>
+        <div class="oh-meta">
+          <span class="oh-badge" id="ovTypeBadge"></span>
+          <span class="oh-meta-stat" id="ovRegio"></span>
+          <span class="oh-meta-stat" id="ovTotaal"></span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('overzichtBg').classList.remove('open')">×</button>
+    </div>
+    <div class="overzicht-body" id="overzichtBody"></div>
+  </div>
+</div>
+
+<div class="confirm-bg" id="confirmBg">
+  <div class="confirm-box">
+    <p id="confirmTekst">Weet je zeker?</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="sluitConfirm()">Annuleren</button>
+      <button class="btn-del" id="confirmOkBtn">Verwijderen</button>
+    </div>
+  </div>
+</div>
+<div class="pv-bg" id="pvBg" onclick="this.classList.remove('open')">
+  <img id="pvImg" src="" alt="">
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════ DATABASE ════════
+// Vaste naam — NOOIT wijzigen, anders verlies je data
+const DB_NAAM = 'NatuurvVDB_v1';
+const DB_VERSIE = 1;
+const db = new Dexie(DB_NAAM);
+db.version(DB_VERSIE).stores({
+  wandelingen:'++wandelingID,type,aktief',
+  etappes:'++etappeID,wandelingID,volgorde,aktief'
+});
+
+// ════════ PERSISTENTIE BEWAKER ════════
+// Vraagt de browser expliciet om persistente opslag (voorkomt automatisch wissen)
+async function vraagPersistentieAan(){
+  if(!navigator.storage?.persist) return;
+  const isPersistent = await navigator.storage.persisted();
+  if(!isPersistent){
+    const granted = await navigator.storage.persist();
+    if(granted){
+      console.log('✅ Persistente opslag toegekend');
+      localStorage.setItem('nv_persistentie','granted');
+    } else {
+      console.warn('⚠️ Persistente opslag geweigerd — gebruik export als backup');
+      toonPersistentieWaarschuwing();
+    }
+  }
+}
+
+function toonPersistentieWaarschuwing(){
+  // Toon eenmalig een waarschuwingsbanner
+  if(localStorage.getItem('nv_persistentie_waarschuwing_gezien')) return;
+  const banner = document.createElement('div');
+  banner.id = 'persistentieBanner';
+  banner.style.cssText = `position:fixed;top:58px;left:0;right:0;z-index:150;background:#fff3cd;border-bottom:2px solid #ffc107;padding:10px 20px;display:flex;align-items:center;gap:12px;font-size:13px;color:#856404`;
+  banner.innerHTML = `
+    <span style="font-size:18px">⚠️</span>
+    <span style="flex:1"><strong>Tip:</strong> Exporteer regelmatig een backup via de knop rechts bovenaan. Je browser kan lokale data wissen bij lage schijfruimte.</span>
+    <button onclick="exportJSON()" style="background:#ffc107;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#856404">Nu exporteren</button>
+    <button onclick="sluitPersistentieBanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#856404;padding:0 4px">×</button>`;
+  document.body.appendChild(banner);
+  // Verschuif main content
+  document.querySelector('.app').style.marginTop = banner.offsetHeight + 'px';
+}
+function sluitPersistentieBanner(){
+  localStorage.setItem('nv_persistentie_waarschuwing_gezien','1');
+  const b = document.getElementById('persistentieBanner');
+  if(b){ b.remove(); document.querySelector('.app').style.marginTop=''; }
+}
+
+// ════════ AUTO-SNAPSHOT (noodanker) ════════
+// Slaat een lichte snapshot op in localStorage (zonder blobs — enkel metadata)
+// zodat we kunnen detecteren of IndexedDB leeg is na heropenen
+async function slaSnapshotOp(){
+  try{
+    const wands = await db.wandelingen.toArray();
+    const etaps = await db.etappes.toArray();
+    const snapshot = {
+      ts: Date.now(),
+      wandelingen: wands.map(w=>({wandelingID:w.wandelingID,naam:w.naam,type:w.type,regio:w.regio})),
+      etappeCount: etaps.length
+    };
+    localStorage.setItem('nv_snapshot', JSON.stringify(snapshot));
+  } catch(e){ /* stille fout */ }
+}
+
+async function controleerDataIntegriteit(){
+  const snapshot = localStorage.getItem('nv_snapshot');
+  if(!snapshot) return; // eerste keer, geen probleem
+  const snap = JSON.parse(snapshot);
+  if(!snap.wandelingen?.length) return;
+  const huidigAantal = await db.wandelingen.count();
+  if(huidigAantal === 0 && snap.wandelingen.length > 0){
+    // IndexedDB is leeg maar snapshot zegt er was data — waarschuw!
+    toonDataVerliesWaarschuwing(snap);
+  }
+}
+
+function toonDataVerliesWaarschuwing(snap){
+  const d = new Date(snap.ts).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'});
+  const banner = document.createElement('div');
+  banner.style.cssText = `position:fixed;top:58px;left:0;right:0;z-index:150;background:#f8d7da;border-bottom:2px solid #dc3545;padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:13px;color:#721c24`;
+  banner.innerHTML = `
+    <span style="font-size:20px">🔴</span>
+    <span style="flex:1"><strong>Opgelet:</strong> Je had ${snap.wandelingen.length} wandeling(en) en ${snap.etappeCount} etappe(s) opgeslagen (laatste backup: ${d}). De lokale database lijkt leeg. Herstel via een JSON-backup.</span>
+    <button onclick="document.getElementById('importInput').click()" style="background:#dc3545;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#fff">📂 Backup herstellen</button>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#721c24;padding:0 4px">×</button>`;
+  document.body.appendChild(banner);
+  document.querySelector('.app').style.marginTop = '60px';
+}
+
+// ════════ JSON EXPORT ════════
+async function exportJSON(){
+  toon('📦 Backup voorbereiden…');
+  try{
+    const wands = await db.wandelingen.toArray();
+    const etaps = await db.etappes.toArray();
+
+    // Converteer ArrayBuffers naar base64 voor JSON
+    const etapsGeserialiseerd = etaps.map(e => {
+      const kopie = {...e};
+      if(kopie.gpxBlob)     kopie.gpxBlob     = bufNaarB64(kopie.gpxBlob);
+      if(kopie.hoofdFoto)   kopie.hoofdFoto   = bufNaarB64(kopie.hoofdFoto);
+      if(kopie.extraFotos)  kopie.extraFotos  = kopie.extraFotos.map(f=>({...f, blob: bufNaarB64(f.blob)}));
+      return kopie;
+    });
+
+    const backup = {
+      versie: '1.0',
+      app: 'Natuurverkenners Wandelbeheer',
+      exportDatum: new Date().toISOString(),
+      wandelingen: wands,
+      etappes: etapsGeserialiseerd
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const datum = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `natuurverkenners-backup-${datum}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    localStorage.setItem('nv_laatste_export', Date.now().toString());
+    toon(`✅ Backup gedownload (${wands.length} wandelingen · ${etaps.length} etappes)`);
+    bijwerkExportInfo();
+  } catch(err){
+    toon('❌ Export mislukt: ' + err.message);
+    console.error(err);
+  }
+}
+
+function bufNaarB64(buf){
+  if(!buf) return null;
+  const bytes = new Uint8Array(buf instanceof ArrayBuffer ? buf : buf);
+  let bin = '';
+  for(let i=0;i<bytes.byteLength;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64NaarBuf(b64){
+  if(!b64) return null;
+  const bin = atob(b64);
+  const buf = new ArrayBuffer(bin.length);
+  const bytes = new Uint8Array(buf);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+// ════════ JSON IMPORT ════════
+async function importJSON(input){
+  const file = input.files[0];
+  input.value = '';
+  if(!file) return;
+
+  try{
+    const tekst = await file.text();
+    const backup = JSON.parse(tekst);
+
+    // Valideer
+    if(!backup.wandelingen || !backup.etappes || backup.app !== 'Natuurverkenners Wandelbeheer'){
+      toon('❌ Ongeldig backup-bestand');
+      return;
+    }
+
+    const aantalW = backup.wandelingen.length;
+    const aantalE = backup.etappes.length;
+    const exportDatum = backup.exportDatum
+      ? new Date(backup.exportDatum).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'})
+      : '?';
+
+    bevestigImport(
+      `Backup van ${exportDatum}\n${aantalW} wandeling(en) · ${aantalE} etappe(s)`,
+      async (modus) => {
+        toon('⏳ Bezig met herstellen…');
+        try{
+          // Deserializeer blobs terug naar ArrayBuffer
+          const etapsHersteld = backup.etappes.map(e => {
+            const kopie = {...e};
+            if(kopie.gpxBlob)    kopie.gpxBlob    = b64NaarBuf(kopie.gpxBlob);
+            if(kopie.hoofdFoto)  kopie.hoofdFoto  = b64NaarBuf(kopie.hoofdFoto);
+            if(kopie.extraFotos) kopie.extraFotos = kopie.extraFotos.map(f=>({...f, blob:b64NaarBuf(f.blob)}));
+            return kopie;
+          });
+
+          if(modus === 'vervang'){
+            await db.etappes.clear();
+            await db.wandelingen.clear();
+          }
+
+          // Bij samenvoegen: nieuwe IDs genereren om conflicten te vermijden
+          if(modus === 'samenvoeg'){
+            const idMap = {};
+            for(const w of backup.wandelingen){
+              const oudID = w.wandelingID;
+              const {wandelingID, ...rest} = w;
+              const nieuwID = await db.wandelingen.add(rest);
+              idMap[oudID] = nieuwID;
+            }
+            for(const e of etapsHersteld){
+              const {etappeID, wandelingID, ...rest} = e;
+              await db.etappes.add({...rest, wandelingID: idMap[wandelingID]||wandelingID});
+            }
+          } else {
+            // Vervang: IDs behouden
+            for(const w of backup.wandelingen){
+              await db.wandelingen.put(w);
+            }
+            for(const e of etapsHersteld){
+              await db.etappes.put(e);
+            }
+          }
+
+          await slaSnapshotOp();
+          await laadWandelingen();
+          huidigeWandelingID = null;
+          document.getElementById('mainContent').innerHTML = leegScherm(
+            'Backup hersteld ✓',
+            `${aantalW} wandeling(en) en ${aantalE} etappe(s) geladen. Kies een wandeling links.`
+          );
+          // Verwijder eventuele waarschuwingsbanner
+          document.querySelector('[style*="f8d7da"]')?.remove();
+          document.querySelector('.app').style.marginTop = '';
+          toon(`✅ ${aantalW} wandelingen en ${aantalE} etappes hersteld`);
+        } catch(err){
+          toon('❌ Herstel mislukt: ' + err.message);
+          console.error(err);
+        }
+      }
+    );
+  } catch(err){
+    toon('❌ Kon bestand niet lezen: ' + err.message);
+  }
+}
+
+// Aangepaste bevestigingsdialoog voor import met twee opties
+function bevestigImport(info, callback){
+  const bg = document.getElementById('confirmBg');
+  document.getElementById('confirmTekst').innerHTML =
+    `<strong>Backup importeren</strong><br><span style="font-size:12px;color:var(--stone)">${info.replace('\n','<br>')}</span><br><br>Hoe wil je importeren?`;
+  bg.classList.add('open');
+  document.getElementById('confirmOkBtn').style.display = 'none';
+  // Voeg tijdelijke knoppen toe
+  const btns = document.querySelector('.confirm-btns');
+  btns.innerHTML = `
+    <button class="btn-cancel" onclick="sluitConfirm()">Annuleren</button>
+    <button class="btn-save" style="background:var(--warn);border:none;border-radius:8px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:500;color:#fff;cursor:pointer" onclick="sluitConfirm();arguments[0].stopPropagation();" id="btnSamenvoeg">+ Samenvoegen</button>
+    <button class="btn-del" id="btnVervang">↺ Vervangen</button>`;
+  document.getElementById('btnSamenvoeg').onclick = ()=>{ sluitConfirm(); callback('samenvoeg'); };
+  document.getElementById('btnVervang').onclick  = ()=>{ sluitConfirm(); callback('vervang'); };
+}
+
+function bijwerkExportInfo(){
+  const ts = localStorage.getItem('nv_laatste_export');
+  const el = document.getElementById('exportInfo');
+  if(!el) return;
+  if(ts){
+    const d = new Date(parseInt(ts)).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'});
+    el.textContent = `Laatste export: ${d}`;
+  } else {
+    el.textContent = 'Nog geen export gemaakt';
+  }
+}
+
+// ════════ STATE ════════
+let huidigeWandelingID=null, bewerktEtappeID=null, bewerktWandelingID=null;
+let wandelingType='';
+let modalMap,modalMarker;
+let huidigeGpxBlob=null, extraFotos=[], hoofdFotoBlob=null, moeilijkheid=0;
+let editorImg=null,editorOrigType='image/jpeg';
+let editorOffX=0,editorOffY=0,editorScale=1,editorOpen=false;
+let isDragging=false,dragSX=0,dragSY=0,dragSOX=0,dragSOY=0;
+
+const DIFF_NAMEN=['Niet ingesteld','Makkelijk','Gemiddeld','Matig','Moeilijk','Zwaar'];
+const DIFF_KLEUR=['','var(--diff1)','var(--diff2)','var(--diff3)','var(--diff4)','var(--diff5)'];
+
+// ════════ KNOP STAAT MACHINE ════════
+// Staten: 'idle' | 'dirty' | 'saving' | 'saved'
+function setEtappeKnopStaat(staat){
+  const btn=document.getElementById('saveEtappeBtn');
+  const msg=document.getElementById('etappeDirtyMsg');
+  if(staat==='idle'){
+    btn.textContent='Geen wijzigingen';btn.disabled=true;
+    btn.style.background='';btn.style.color='';
+    msg.classList.remove('visible');
+  } else if(staat==='dirty'){
+    btn.textContent='Opslaan';btn.disabled=false;
+    btn.style.background='var(--fern)';btn.style.color='#fff';
+    msg.classList.add('visible');
+  } else if(staat==='saving'){
+    btn.textContent='Wordt opgeslagen…';btn.disabled=true;
+    btn.style.background='var(--stone)';btn.style.color='#fff';
+  } else if(staat==='saved'){
+    btn.textContent='Opgeslagen ✓';btn.disabled=true;
+    btn.style.background='var(--leaf)';btn.style.color='#fff';
+  }
+}
+function setWandKnopStaat(staat){
+  const btn=document.getElementById('wandSaveBtn');
+  const msg=document.getElementById('wandDirtyMsg');
+  if(staat==='idle'){btn.textContent='Geen wijzigingen';btn.disabled=true;msg.classList.remove('visible')}
+  else if(staat==='dirty'){btn.textContent='Opslaan';btn.disabled=false;msg.classList.add('visible')}
+  else if(staat==='saving'){btn.textContent='Wordt opgeslagen…';btn.disabled=true}
+  else if(staat==='saved'){btn.textContent='Opgeslagen ✓';btn.disabled=true}
+}
+// ════════ DIRTY STATE FUNCTIONS ════════
+function wandDirty(){
+  const naam=document.getElementById('wandNaam').value.trim();
+  const hasType=!!wandelingType||!!bewerktWandelingID;
+  setWandKnopStaat(naam.length>0&&hasType?'dirty':'idle');
+}
+
+// Etappe modal dirty — per tab stip indicator
+const tabDirty=new Set();
+function etappeDirty(tabIdx){
+  tabDirty.add(tabIdx);
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('dirty',tabDirty.has(i)));
+  const titel=document.getElementById('inpTitel').value.trim();
+  setEtappeKnopStaat(titel.length>0?'dirty':'idle');
+}
+
+// ════════ HELPERS ════════
+function blobUrl(buf,type='image/jpeg'){return URL.createObjectURL(new Blob([buf],{type}))}
+function datumStr(ts){if(!ts)return '—';return new Date(ts).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'})}
+function leegScherm(t,s){return`<div class="empty-state"><div class="empty-icon">🗺️</div><h2>${t}</h2><p>${s}</p></div>`}
+let toastT;
+function toon(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800)}
+function bevestig(tekst,cb){document.getElementById('confirmTekst').textContent=tekst;document.getElementById('confirmBg').classList.add('open');document.getElementById('confirmOkBtn').onclick=()=>{sluitConfirm();cb()}}
+function sluitConfirm(){document.getElementById('confirmBg').classList.remove('open')}
+function bekijkFoto(src){document.getElementById('pvImg').src=src;document.getElementById('pvBg').classList.add('open')}
+
+// ════════ TABS ════════
+function toonTab(idx){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.querySelectorAll('.tab-pane').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  if(idx===0&&modalMap)setTimeout(()=>modalMap.invalidateSize(),50);
+}
+
+// ════════ BOOL & PILL HELPERS ════════
+function toggleBool(label){
+  const cb=label.querySelector('input[type="checkbox"]');
+  setTimeout(()=>label.classList.toggle('on',cb.checked),0);
+}
+function setBool(id,val){
+  const el=document.getElementById(id);if(!el)return;
+  el.checked=!!val;el.closest('.bool-item')?.classList.toggle('on',!!val);
+}
+function togglePill(el){
+  const grp=el.dataset.group;
+  if(grp==='routetype')document.querySelectorAll('.ms-pill[data-group="routetype"]').forEach(p=>p.classList.remove('on'));
+  el.classList.toggle('on');
+}
+function getPills(g){return[...document.querySelectorAll(`.ms-pill[data-group="${g}"].on`)].map(p=>p.dataset.val)}
+function setPills(g,vals=[]){document.querySelectorAll(`.ms-pill[data-group="${g}"]`).forEach(p=>p.classList.toggle('on',vals.includes(p.dataset.val)))}
+function resetPills(){document.querySelectorAll('.ms-pill').forEach(p=>p.classList.remove('on'))}
+
+// ════════ DIFFICULTY ════════
+function setDiff(val){
+  moeilijkheid=val;
+  document.querySelectorAll('#diffPicker .diff-picker-block').forEach((b,i)=>{b.className='diff-picker-block';if(val>0&&i+1<=val)b.classList.add(`a${val}`)});
+  const l=document.getElementById('diffLbl');l.textContent=DIFF_NAMEN[val]||'Niet ingesteld';l.style.color=val>0?DIFF_KLEUR[val]:'var(--stone)';
+}
+
+// ════════ MAP ════════
+function initMap(){
+  if(modalMap)return;
+  modalMap=L.map('modalMap').setView([51,4],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(modalMap);
+}
+
+// ════════ WANDELINGEN LIJST ════════
+async function laadWandelingen(){
+  const list=document.getElementById('wandelingList');
+  const items=await db.wandelingen.toArray();
+  list.innerHTML='';
+  if(!items.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;padding:6px 8px">Nog geen wandelingen</div>';return}
+  for(const w of items){
+    const cnt=await db.etappes.where('wandelingID').equals(w.wandelingID).count();
+    const div=document.createElement('div');
+    div.className='wand-item'+(w.wandelingID===huidigeWandelingID?' active':'');
+    div.innerHTML=`<span class="wand-type-pill ${w.type==='dag'?'pill-dag':'pill-meer'}">${w.type==='dag'?'DAG':'MEER'}</span><span class="wand-name">${w.naam}</span><span class="wand-cnt">${cnt}</span><span class="wand-actions"><button class="wa-btn" title="Overzicht bekijken" onclick="openOverzicht(event,${w.wandelingID})">🔭</button><button class="wa-btn" title="Bewerken" onclick="openBewerkWandeling(event,${w.wandelingID})">✎</button><button class="wa-btn del" title="Verwijderen" onclick="verwijderWandeling(event,${w.wandelingID})">✕</button></span>`;
+    div.addEventListener('click',e=>{if(e.target.classList.contains('wa-btn'))return;selecteerWandeling(w.wandelingID)});
+    list.appendChild(div);
+  }
+}
+
+async function selecteerWandeling(id){huidigeWandelingID=id;await laadWandelingen();toonWandelingInhoud(id)}
+
+async function toonWandelingInhoud(id){
+  const w=await db.wandelingen.get(id);if(!w)return;
+  const etappes=await db.etappes.where('wandelingID').equals(id).sortBy('volgorde');
+  const main=document.getElementById('mainContent');
+  const totKm=etappes.reduce((s,e)=>s+(parseFloat(e.afstand)||0),0);
+  const DIFF_N=['','Makkelijk','Gemiddeld','Matig','Moeilijk','Zwaar'];
+
+  // Toon "etappe toevoegen" knop alleen voor meerdaagse OF dagwandeling zonder etappe
+  const toonAddBtn=w.type==='meerdaagse'||(w.type==='dag'&&etappes.length===0);
+
+  let cardsHTML='';
+  for(const e of etappes){
+    let imgHTML=`<div class="card-placeholder">🌲</div>`;
+    if(e.hoofdFoto){const src=blobUrl(e.hoofdFoto,e.hoofdFotoType||'image/jpeg');imgHTML=`<img src="${src}" alt="" onclick="bekijkFoto('${src}')">`}
+    const tags=[];
+    if(e.hond)tags.push('<span class="tag tag-hond">🐶 Hond</span>');
+    if(e.rolstoel)tags.push('<span class="tag tag-rolstoel">♿ Rolstoel</span>');
+    if(e.stationsstapper)tags.push('<span class="tag tag-station">🚉 Station</span>');
+    if(e.prikkelarm)tags.push('<span class="tag tag-prikkelarm">🤫 Prikkelarm</span>');
+    cardsHTML+=`<div class="etappe-card">
+      <div class="card-img-wrap">${imgHTML}${w.type==='meerdaagse'?`<span class="etappe-num">Etappe ${e.volgorde||'—'}</span>`:''}</div>
+      <div class="card-body">
+        <div class="card-title">${e.titel||'Naamloos'}</div>
+        <div class="card-stats"><span>📏 <strong>${e.afstand||'—'}</strong> km</span>${e.hoogteverschil&&e.hoogteverschil!=='—'?`<span>⛰️ <strong>${e.hoogteverschil}</strong> m</span>`:''} ${e.geschatdeTijd&&e.geschatdeTijd!=='—'?`<span>⏱️ <strong>${e.geschatdeTijd}</strong></span>`:''}</div>
+        <div class="card-tags"><div class="diff-blocks" data-level="${e.moeilijkheid||0}"><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div></div>${e.alpineSchaal?`<span class="alpine-pill">${e.alpineSchaal}</span>`:''} ${tags.join('')}</div>
+        ${e.beschrijving?`<div class="card-desc">${e.beschrijving.substring(0,90)}${e.beschrijving.length>90?'…':''}</div>`:''}
+        <div class="card-footer">
+          <button class="card-btn fiche" onclick="toonFiche(${e.etappeID})">📄 Fiche</button>
+          <button class="card-btn" onclick="openBewerkEtappe(${e.etappeID})">✎ Bewerken</button>
+          <button class="card-btn danger" onclick="verwijderEtappe(${e.etappeID})">✕</button>
+        </div>
+      </div></div>`;
+  }
+
+  main.innerHTML=`
+    <div class="wand-header">
+      <div class="wand-header-left">
+        <h2>${w.naam}</h2>
+        <div class="wand-meta-row">
+          <span class="type-badge ${w.type==='dag'?'badge-dag':'badge-meer'}">${w.type==='dag'?'Dagwandeling':'Meerdaagse'}</span>
+          ${w.regio?`<span class="wand-stat">📍 ${w.regio}</span>`:''}
+          ${totKm>0?`<span class="wand-stat">📏 <strong>${totKm.toFixed(1)}</strong> km totaal</span>`:''}
+          <span class="wand-stat">${etappes.length} etappe${etappes.length!==1?'s':''}</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-sec" onclick="openOverzicht(null,${id})">🔭 Overzicht</button>
+        <button class="btn-sec" onclick="openBewerkWandelingInline(${id})">✎ Wandeling bewerken</button>
+        ${toonAddBtn?`<button class="btn-add" onclick="openNieuweEtappe()">+ ${w.type==='dag'?'Etappe invullen':'Etappe toevoegen'}</button>`:''}
+      </div>
+    </div>
+    ${w.beschrijving?`<div class="wand-desc-display">${w.beschrijving}</div>`:''}
+    <div id="wandEditPanelWrap"></div>
+    <div class="etappes-grid" id="etappesGrid">${cardsHTML||'<div style="color:var(--stone);font-size:14px;padding:16px 0">Nog geen etappes — voeg er een toe.</div>'}</div>`;
+}
+
+// ════════ WANDELING MODALS ════════
+function openNieuweWandelingModal(){
+  bewerktWandelingID=null; wandelingType='';
+  document.getElementById('wandModalTitel').textContent='Nieuwe wandeling';
+  document.getElementById('wandNaam').value='';
+  document.getElementById('wandRegio').value='';
+  document.getElementById('wandBeschrijving').value='';
+  document.getElementById('optDag').classList.remove('selected');
+  document.getElementById('optMeer').classList.remove('selected');
+  document.getElementById('typeKeuzeWrap').style.display='block';
+  document.getElementById('wandSaveBtn').disabled=true;
+  document.getElementById('wandDirtyMsg').classList.remove('visible');
+  document.getElementById('wandelingModal').classList.add('open');
+}
+function kiesType(type){
+  wandelingType=type;
+  document.getElementById('optDag').classList.toggle('selected',type==='dag');
+  document.getElementById('optMeer').classList.toggle('selected',type==='meerdaagse');
+  wandDirty();
+}
+function sluitWandelingModal(){document.getElementById('wandelingModal').classList.remove('open')}
+async function saveWandeling(){
+  const naam=document.getElementById('wandNaam').value.trim();
+  if(!naam){toon('⚠️ Geef een naam op');return}
+  if(!wandelingType&&!bewerktWandelingID){toon('⚠️ Kies een type');return}
+  setWandKnopStaat('saving');
+  const data={naam,regio:document.getElementById('wandRegio').value.trim(),beschrijving:document.getElementById('wandBeschrijving').value.trim(),type:wandelingType||undefined,wijzigingsdatum:Date.now()};
+  if(bewerktWandelingID){
+    await db.wandelingen.update(bewerktWandelingID,data);
+    setWandKnopStaat('saved');
+    setTimeout(()=>{sluitWandelingModal();toonWandelingInhoud(bewerktWandelingID);laadWandelingen()},600);
+  } else {
+    data.type=wandelingType;data.aanmaakdatum=Date.now();data.aktief=1;
+    const id=await db.wandelingen.add(data);
+    huidigeWandelingID=id;
+    setWandKnopStaat('saved');
+    await slaSnapshotOp();
+    setTimeout(()=>{sluitWandelingModal();toonWandelingInhoud(id);laadWandelingen()},600);
+  }
+}
+
+// Wandeling bewerken: inline paneel in de main
+async function openBewerkWandelingInline(id){
+  const w=await db.wandelingen.get(id);if(!w)return;
+  bewerktWandelingID=id; wandelingType=w.type;
+  const wrap=document.getElementById('wandEditPanelWrap');
+  if(wrap.innerHTML!==''){wrap.innerHTML='';return} // toggle
+  wrap.innerHTML=`
+    <div class="wand-edit-panel">
+      <div class="wep-head">
+        <h3>✎ Wandeling bewerken</h3>
+        <button class="btn-cancel" style="padding:5px 12px;font-size:12px" onclick="document.getElementById('wandEditPanelWrap').innerHTML=''">Sluiten</button>
+      </div>
+      <div class="wep-body">
+        <div class="field wep-full">
+          <div class="field-label">Naam wandeling</div>
+          <input type="text" id="wepNaam" value="${w.naam||''}" oninput="wepCheckDirty()">
+        </div>
+        <div class="field">
+          <div class="field-label">Regio / streek</div>
+          <input type="text" id="wepRegio" value="${w.regio||''}" oninput="wepCheckDirty()">
+        </div>
+        <div class="field">
+          <div class="field-label">Type</div>
+          <input type="text" value="${w.type==='dag'?'Dagwandeling':'Meerdaagse'}" readonly>
+        </div>
+        <div class="field wep-full">
+          <div class="field-label">Beschrijving</div>
+          <textarea id="wepBeschrijving" rows="3" oninput="wepCheckDirty()">${w.beschrijving||''}</textarea>
+        </div>
+        <div class="wep-full" style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px">
+          <button class="btn-cancel" onclick="document.getElementById('wandEditPanelWrap').innerHTML=''">Annuleren</button>
+          <button class="btn-save" id="wepSaveBtn" onclick="saveWandelingInline()" disabled>Wijzigingen opslaan</button>
+        </div>
+      </div>
+    </div>`;
+}
+function wepCheckDirty(){
+  const naam=document.getElementById('wepNaam')?.value.trim();
+  const btn=document.getElementById('wepSaveBtn');
+  if(btn)btn.disabled=!naam||naam.length===0;
+}
+async function saveWandelingInline(){
+  const naam=document.getElementById('wepNaam').value.trim();
+  if(!naam)return;
+  await db.wandelingen.update(bewerktWandelingID,{
+    naam,regio:document.getElementById('wepRegio').value.trim(),
+    beschrijving:document.getElementById('wepBeschrijving').value.trim(),
+    wijzigingsdatum:Date.now()
+  });
+  document.getElementById('wandEditPanelWrap').innerHTML='';
+  toon('Wijzigingen opgeslagen ✓');
+  await laadWandelingen();
+  toonWandelingInhoud(bewerktWandelingID);
+}
+
+async function openBewerkWandeling(e,id){
+  e.stopPropagation();
+  selecteerWandeling(id);
+  await new Promise(r=>setTimeout(r,100));
+  openBewerkWandelingInline(id);
+}
+async function verwijderWandeling(e,id){
+  e.stopPropagation();
+  bevestig('Verwijder deze wandeling én alle etappes?',async()=>{
+    await db.etappes.where('wandelingID').equals(id).delete();
+    await db.wandelingen.delete(id);
+    if(huidigeWandelingID===id){huidigeWandelingID=null;document.getElementById('mainContent').innerHTML=leegScherm('Wandeling verwijderd','Voeg een nieuwe wandeling toe.')}
+    await laadWandelingen();toon('Wandeling verwijderd');
+  });
+}
+
+// ════════ ETAPPE MODAL ════════
+function resetEtappeModal(){
+  bewerktEtappeID=null;huidigeGpxBlob=null;extraFotos=[];hoofdFotoBlob=null;editorImg=null;editorOpen=false;moeilijkheid=0;tabDirty.clear();
+  ['inpTitel','inpAdres','inpRegio','inpProvincie','inpBeschrijving','inpAlpine','inpOndergrond','inpPadbreedte','inpSociaalDruk','inpVoorspelbaar','inpMentaal','inpPsychNotities','inpGSM','inpMaxGroep','inpBegeleiders','inpAantalRust','infoAanmaak','infoWijziging'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  ['gpxInput','hoofdfotoInput','fotoInput'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('gpxStats').style.display='none';
+  document.getElementById('gpxError').style.display='none';
+  document.getElementById('fotoEditorWrap').classList.remove('visible');
+  document.getElementById('hfZone').style.display='block';
+  document.getElementById('cropPreviewWrap').style.display='none';
+  document.getElementById('canvasOuter').style.display='block';
+  document.querySelector('.foto-editor-head').style.display='flex';
+  document.getElementById('photoStrip').innerHTML='';
+  ['inpRolstoel','inpRollator','inpKinderwagen','inpHond','inpVisueel','inpIndividueel','inpKleineGroep','inpGroteGroep','inpParking','inpOV','inpBus','inpStation','inpPrikkelarm','inpCognitief','inpGedrag','inpRustMomenten','inpVroegtijdig','inpRustbanken','inpSchaduw','inpToilet','inpDrinkwater','inpOverdekt','inpHoreca','inpNooduitgang','inpAED','inpUitgelicht'].forEach(id=>setBool(id,false));
+  setBool('inpAktief',true);resetPills();setDiff(0);toonTab(0);
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('dirty'));
+  setEtappeKnopStaat('idle');
+}
+
+async function openNieuweEtappe(){
+  resetEtappeModal();
+  const w=await db.wandelingen.get(huidigeWandelingID);
+  const cnt=await db.etappes.where('wandelingID').equals(huidigeWandelingID).count();
+  document.getElementById('etappeModalTitel').textContent=w.type==='dag'?'Dagwandeling invullen':`Etappe ${cnt+1} toevoegen`;
+  document.getElementById('etappeModal').classList.add('open');
+  setTimeout(()=>{initMap();modalMap.invalidateSize()},100);
+}
+
+async function openBewerkEtappe(id){
+  resetEtappeModal();
+  const e=await db.etappes.get(id);if(!e)return;
+  bewerktEtappeID=id;huidigeGpxBlob=e.gpxBlob||null;extraFotos=e.extraFotos?[...e.extraFotos]:[];hoofdFotoBlob=e.hoofdFoto||null;moeilijkheid=e.moeilijkheid||0;
+  document.getElementById('etappeModalTitel').textContent='Etappe bewerken';
+  document.getElementById('inpTitel').value=e.titel||'';
+  document.getElementById('inpAdres').value=e.startAdres||'';
+  document.getElementById('inpRegio').value=e.regio||'';
+  document.getElementById('inpProvincie').value=e.provincie||'';
+  document.getElementById('inpBeschrijving').value=e.beschrijving||'';
+  document.getElementById('inpAlpine').value=e.alpineSchaal||'';
+  document.getElementById('inpOndergrond').value=e.ondergrond||'';
+  document.getElementById('inpPadbreedte').value=e.padBreedte||'';
+  document.getElementById('inpSociaalDruk').value=e.sociaaleDruk||'';
+  document.getElementById('inpVoorspelbaar').value=e.voorspelbaarheid||'';
+  document.getElementById('inpMentaal').value=e.mentaalBelasting||'';
+  document.getElementById('inpPsychNotities').value=e.psychNotities||'';
+  document.getElementById('inpGSM').value=e.gsmBereik||'';
+  document.getElementById('inpMaxGroep').value=e.maxGroepsgrootte||'';
+  document.getElementById('inpBegeleiders').value=e.aanbevolenBegeleiders||'';
+  document.getElementById('inpAantalRust').value=e.aantalRustbanken||'';
+  document.getElementById('infoAanmaak').value=datumStr(e.aanmaakdatum);
+  document.getElementById('infoWijziging').value=datumStr(e.wijzigingsdatum);
+  if(e.afstand){document.getElementById('statAfstand').textContent=e.afstand;document.getElementById('statPunten').textContent=e.gpxPunten||'—';document.getElementById('statHoogte').textContent=e.hoogteverschil||'—';document.getElementById('statStijging').textContent=e.stijgingsPct||'—';document.getElementById('statTijd').textContent=e.geschatdeTijd||'—';document.getElementById('gpxStats').style.display='flex'}
+  const bmap={inpRolstoel:'rolstoel',inpRollator:'rollator',inpKinderwagen:'kinderwagen',inpHond:'hond',inpVisueel:'geschiktVisueel',inpIndividueel:'geschiktIndividueel',inpKleineGroep:'geschiktKleineGroep',inpGroteGroep:'geschiktGroteGroep',inpParking:'parkingAanwezig',inpOV:'ovVriendelijk',inpBus:'busToegankelijk',inpStation:'stationsstapper',inpPrikkelarm:'prikkelarm',inpCognitief:'geschiktCognitief',inpGedrag:'geschiktGedrag',inpRustMomenten:'rustMomentenVoorzien',inpVroegtijdig:'vroegtijdigStoppen',inpRustbanken:'rustbankenAanwezig',inpSchaduw:'schaduwAanwezig',inpToilet:'toiletOnderweg',inpDrinkwater:'drinkwaterAanwezig',inpOverdekt:'overdekteRustplaats',inpHoreca:'horecaOnderweg',inpNooduitgang:'nooduitgangMogelijk',inpAED:'aedInBuurt',inpAktief:'aktief',inpUitgelicht:'uitgelicht'};
+  Object.entries(bmap).forEach(([elId,veld])=>setBool(elId,e[veld]));
+  setPills('routetype',e.routeType?[e.routeType]:[]);setPills('navigatie',e.navigatiemethode||[]);setPills('seizoen',e.besteSeizoen||[]);setPills('omgeving',e.omgevingstype||[]);setDiff(moeilijkheid);
+  if(e.hoofdFoto){const src=blobUrl(e.hoofdFoto,e.hoofdFotoType||'image/jpeg');document.getElementById('hfZone').style.display='none';document.getElementById('fotoEditorWrap').classList.add('visible');document.getElementById('cropPreviewWrap').style.display='block';document.getElementById('canvasOuter').style.display='none';document.querySelector('.foto-editor-head').style.display='none';document.getElementById('cropPreview').src=src}
+  hertekenExtraStrip();
+  // Bij bewerken: knop actief want gegevens zijn ingevuld, maar nog geen dirty
+  setEtappeKnopStaat('idle');
+  // Overschrijf naar 'dirty' staat zodat opslaan mogelijk is bij bewerkingen
+  document.getElementById('saveEtappeBtn').disabled=false;
+  document.getElementById('saveEtappeBtn').textContent='Geen wijzigingen';
+  document.getElementById('etappeDirtyMsg').classList.remove('visible');
+  document.getElementById('etappeModal').classList.add('open');
+  setTimeout(()=>{initMap();modalMap.invalidateSize();if(e.startLat&&e.startLng){modalMap.setView([e.startLat,e.startLng],14);if(modalMarker)modalMap.removeLayer(modalMarker);modalMarker=L.marker([e.startLat,e.startLng]).addTo(modalMap)}},100);
+}
+function sluitEtappeModal(){document.getElementById('etappeModal').classList.remove('open')}
+
+// ════════ GPX ════════
+async function verwerkGPX(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('gpxError').style.display='none';
+  const text=await file.text();
+  const xml=new DOMParser().parseFromString(text,'text/xml');
+  const naam=xml.querySelector('trk > name')?.textContent||'';
+  const pts=xml.querySelectorAll('trkpt');
+  if(pts.length<2){document.getElementById('gpxError').style.display='block';return}
+  huidigeGpxBlob=await file.arrayBuffer();
+  if(naam&&!document.getElementById('inpTitel').value)document.getElementById('inpTitel').value=naam;
+  const lat0=parseFloat(pts[0].getAttribute('lat')),lng0=parseFloat(pts[0].getAttribute('lon'));
+  let dist=0,stijging=0;
+  const arr=[...pts].map(p=>({lat:parseFloat(p.getAttribute('lat')),lon:parseFloat(p.getAttribute('lon')),ele:parseFloat(p.querySelector('ele')?.textContent||0)||0}));
+  for(let i=0;i<arr.length-1;i++){dist+=haversine(arr[i].lat,arr[i].lon,arr[i+1].lat,arr[i+1].lon);const d=arr[i+1].ele-arr[i].ele;if(d>0)stijging+=d}
+  const distKm=dist.toFixed(2),stijgM=Math.round(stijging),pct=dist>0?(stijging/(dist*1000)*100).toFixed(1):0;
+  const min=Math.round((dist/5+stijging/300)*60),tijd=`${Math.floor(min/60)}u${String(min%60).padStart(2,'0')}`;
+  document.getElementById('statAfstand').textContent=distKm;document.getElementById('statPunten').textContent=pts.length;document.getElementById('statHoogte').textContent=stijgM;document.getElementById('statStijging').textContent=pct;document.getElementById('statTijd').textContent=tijd;document.getElementById('gpxStats').style.display='flex';
+  initMap();modalMap.setView([lat0,lng0],14);if(modalMarker)modalMap.removeLayer(modalMarker);modalMarker=L.marker([lat0,lng0]).addTo(modalMap);
+  try{
+    const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat0}&lon=${lng0}&zoom=19&addressdetails=1`);
+    const data=await res.json();const a=data.address;
+    document.getElementById('inpAdres').value=`${a.road||''} ${a.house_number||''}, ${a.postcode||''} ${a.city||a.town||a.village||''} [${(a.country_code||'').toUpperCase()}]`.trim().replace(/^,\s*/,'');
+    if(!document.getElementById('inpRegio').value)document.getElementById('inpRegio').value=a.county||a.state||'';
+    if(!document.getElementById('inpProvincie').value)document.getElementById('inpProvincie').value=a.state||'';
+  }catch{document.getElementById('inpAdres').value=`${lat0.toFixed(5)}, ${lng0.toFixed(5)}`}
+  // Titel ingevuld = knop actief
+  if(document.getElementById('inpTitel').value.trim())etappeDirty(0);
+}
+function haversine(lat1,lon1,lat2,lon2){const R=6371,dl=(lat2-lat1)*Math.PI/180,dL=(lon2-lon1)*Math.PI/180,a=Math.sin(dl/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dL/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
+
+// ════════ HOOFDFOTO ════════
+async function verwerkHoofdFoto(input){
+  const file=input.files[0];input.value='';if(!file)return;
+  const errEl=document.getElementById('hfError');errEl.style.display='none';
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=async()=>{
+    if(img.naturalWidth<=img.naturalHeight){errEl.textContent='❌ Alleen landscape foto\'s toegestaan (breedte > hoogte).';errEl.style.display='block';URL.revokeObjectURL(url);return}
+    editorImg=img;editorOrigType=file.type||'image/jpeg';hoofdFotoBlob=null;
+    document.getElementById('hfZone').style.display='none';document.getElementById('fotoEditorWrap').classList.add('visible');document.getElementById('canvasOuter').style.display='block';document.getElementById('cropPreviewWrap').style.display='none';document.querySelector('.foto-editor-head').style.display='flex';
+    setupEditor();
+  };
+  img.onerror=()=>{errEl.textContent='❌ Kon afbeelding niet laden.';errEl.style.display='block'};
+  img.src=url;
+}
+function setupEditor(){
+  const outer=document.getElementById('canvasOuter'),canvas=document.getElementById('editorCanvas');
+  const W=outer.clientWidth||600,H=Math.round(W*9/16);
+  outer.style.height=H+'px';canvas.width=W;canvas.height=H;
+  const sW=W/editorImg.naturalWidth,sH=H/editorImg.naturalHeight;editorScale=Math.max(sW,sH);
+  editorOffX=(W-editorImg.naturalWidth*editorScale)/2;editorOffY=(H-editorImg.naturalHeight*editorScale)/2;
+  editorOpen=true;tekenCanvas();bindEditor();
+  setTimeout(()=>document.getElementById('dragHint').classList.add('hidden'),3000);
+}
+function tekenCanvas(){if(!editorImg||!editorOpen)return;const c=document.getElementById('editorCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(editorImg,editorOffX,editorOffY,editorImg.naturalWidth*editorScale,editorImg.naturalHeight*editorScale)}
+function clamp(){const c=document.getElementById('editorCanvas'),iW=editorImg.naturalWidth*editorScale,iH=editorImg.naturalHeight*editorScale;editorOffX=Math.min(0,Math.max(c.width-iW,editorOffX));editorOffY=Math.min(0,Math.max(c.height-iH,editorOffY))}
+function bindEditor(){
+  const o=document.getElementById('canvasOuter');
+  o.onmousedown=e=>{isDragging=true;dragSX=e.clientX;dragSY=e.clientY;dragSOX=editorOffX;dragSOY=editorOffY;e.preventDefault()};
+  window.onmousemove=e=>{if(!isDragging)return;editorOffX=dragSOX+(e.clientX-dragSX);editorOffY=dragSOY+(e.clientY-dragSY);clamp();tekenCanvas()};
+  window.onmouseup=()=>{isDragging=false};
+  o.ontouchstart=e=>{const t=e.touches[0];isDragging=true;dragSX=t.clientX;dragSY=t.clientY;dragSOX=editorOffX;dragSOY=editorOffY;e.preventDefault()};
+  o.ontouchmove=e=>{if(!isDragging)return;const t=e.touches[0];editorOffX=dragSOX+(t.clientX-dragSX);editorOffY=dragSOY+(t.clientY-dragSY);clamp();tekenCanvas();e.preventDefault()};
+  o.ontouchend=()=>{isDragging=false};
+}
+function resetFotoPos(){if(!editorImg)return;const c=document.getElementById('editorCanvas');editorOffX=(c.width-editorImg.naturalWidth*editorScale)/2;editorOffY=(c.height-editorImg.naturalHeight*editorScale)/2;tekenCanvas()}
+function bevestigCrop(){
+  if(!editorImg)return;
+  const outW=1280,outH=720,off=document.createElement('canvas');off.width=outW;off.height=outH;
+  const ctx=off.getContext('2d'),ec=document.getElementById('editorCanvas'),sc=outW/ec.width;
+  ctx.drawImage(editorImg,editorOffX*sc,editorOffY*sc,editorImg.naturalWidth*editorScale*sc,editorImg.naturalHeight*editorScale*sc);
+  off.toBlob(blob=>{
+    const fr=new FileReader();fr.onload=()=>{
+      hoofdFotoBlob=fr.result;
+      document.getElementById('cropPreview').src=URL.createObjectURL(blob);
+      document.getElementById('canvasOuter').style.display='none';document.getElementById('cropPreviewWrap').style.display='block';document.querySelector('.foto-editor-head').style.display='none';editorOpen=false;
+      toon(`✓ Foto opgeslagen · ${Math.round(fr.result.byteLength/1024)} KB`);etappeDirty(5);
+    };fr.readAsArrayBuffer(blob);
+  },'image/jpeg',0.82);
+}
+function herOpenEditor(){if(!editorImg){verwijderHoofdFoto();return}document.getElementById('canvasOuter').style.display='block';document.getElementById('cropPreviewWrap').style.display='none';document.querySelector('.foto-editor-head').style.display='flex';editorOpen=true;setTimeout(setupEditor,50)}
+function verwijderHoofdFoto(){editorImg=null;hoofdFotoBlob=null;editorOpen=false;document.getElementById('fotoEditorWrap').classList.remove('visible');document.getElementById('hfZone').style.display='block';document.getElementById('hfError').style.display='none';document.getElementById('hoofdfotoInput').value=''}
+const hfZone=document.getElementById('hfZone');
+hfZone.addEventListener('dragover',e=>{e.preventDefault();hfZone.classList.add('dragover')});
+hfZone.addEventListener('dragleave',()=>hfZone.classList.remove('dragover'));
+hfZone.addEventListener('drop',e=>{e.preventDefault();hfZone.classList.remove('dragover');const file=e.dataTransfer.files[0];if(file&&file.type.startsWith('image/')){const inp=document.getElementById('hoofdfotoInput');const dt=new DataTransfer();dt.items.add(file);inp.files=dt.files;verwerkHoofdFoto(inp)}});
+
+// ════════ EXTRA FOTO'S ════════
+async function verwerkExtraFotos(input){for(const file of input.files){const buf=await file.arrayBuffer();extraFotos.push({naam:file.name,blob:buf,type:file.type})}input.value='';hertekenExtraStrip();etappeDirty(5)}
+function hertekenExtraStrip(){const strip=document.getElementById('photoStrip');strip.innerHTML='';extraFotos.forEach((f,i)=>{const url=blobUrl(f.blob,f.type);const w=document.createElement('div');w.className='pt-wrap';w.innerHTML=`<img src="${url}" onclick="bekijkFoto('${url}')"><button class="pt-remove" onclick="verwijderExtra(${i})">✕</button>`;strip.appendChild(w)})}
+function verwijderExtra(i){extraFotos.splice(i,1);hertekenExtraStrip()}
+
+// ════════ ETAPPE OPSLAAN ════════
+async function saveEtappe(){
+  const titel=document.getElementById('inpTitel').value.trim();
+  if(!titel){toon('⚠️ Geef een naam op voor de etappe');toonTab(0);return}
+  setEtappeKnopStaat('saving');
+  const cnt=await db.etappes.where('wandelingID').equals(huidigeWandelingID).count();
+  const data={
+    wandelingID:huidigeWandelingID,volgorde:bewerktEtappeID?undefined:cnt+1,titel,
+    afstand:document.getElementById('statAfstand').textContent,gpxPunten:document.getElementById('statPunten').textContent,
+    hoogteverschil:document.getElementById('statHoogte').textContent,stijgingsPct:document.getElementById('statStijging').textContent,geschatdeTijd:document.getElementById('statTijd').textContent,
+    startAdres:document.getElementById('inpAdres').value,startLat:modalMarker?modalMarker.getLatLng().lat:null,startLng:modalMarker?modalMarker.getLatLng().lng:null,
+    regio:document.getElementById('inpRegio').value,provincie:document.getElementById('inpProvincie').value,beschrijving:document.getElementById('inpBeschrijving').value,
+    routeType:getPills('routetype')[0]||'',navigatiemethode:getPills('navigatie'),moeilijkheid,alpineSchaal:document.getElementById('inpAlpine').value,
+    ondergrond:document.getElementById('inpOndergrond').value,padBreedte:document.getElementById('inpPadbreedte').value,besteSeizoen:getPills('seizoen'),omgevingstype:getPills('omgeving'),
+    rolstoel:document.getElementById('inpRolstoel').checked?1:0,rollator:document.getElementById('inpRollator').checked?1:0,kinderwagen:document.getElementById('inpKinderwagen').checked?1:0,
+    hond:document.getElementById('inpHond').checked?1:0,geschiktVisueel:document.getElementById('inpVisueel').checked?1:0,
+    geschiktIndividueel:document.getElementById('inpIndividueel').checked?1:0,geschiktKleineGroep:document.getElementById('inpKleineGroep').checked?1:0,geschiktGroteGroep:document.getElementById('inpGroteGroep').checked?1:0,
+    maxGroepsgrootte:parseInt(document.getElementById('inpMaxGroep').value)||null,aanbevolenBegeleiders:parseInt(document.getElementById('inpBegeleiders').value)||null,
+    parkingAanwezig:document.getElementById('inpParking').checked?1:0,ovVriendelijk:document.getElementById('inpOV').checked?1:0,busToegankelijk:document.getElementById('inpBus').checked?1:0,stationsstapper:document.getElementById('inpStation').checked?1:0,
+    prikkelarm:document.getElementById('inpPrikkelarm').checked?1:0,geschiktCognitief:document.getElementById('inpCognitief').checked?1:0,geschiktGedrag:document.getElementById('inpGedrag').checked?1:0,
+    rustMomentenVoorzien:document.getElementById('inpRustMomenten').checked?1:0,vroegtijdigStoppen:document.getElementById('inpVroegtijdig').checked?1:0,
+    sociaaleDruk:document.getElementById('inpSociaalDruk').value,voorspelbaarheid:document.getElementById('inpVoorspelbaar').value,mentaalBelasting:document.getElementById('inpMentaal').value,psychNotities:document.getElementById('inpPsychNotities').value,
+    rustbankenAanwezig:document.getElementById('inpRustbanken').checked?1:0,aantalRustbanken:parseInt(document.getElementById('inpAantalRust').value)||0,
+    schaduwAanwezig:document.getElementById('inpSchaduw').checked?1:0,toiletOnderweg:document.getElementById('inpToilet').checked?1:0,drinkwaterAanwezig:document.getElementById('inpDrinkwater').checked?1:0,
+    overdekteRustplaats:document.getElementById('inpOverdekt').checked?1:0,horecaOnderweg:document.getElementById('inpHoreca').checked?1:0,
+    nooduitgangMogelijk:document.getElementById('inpNooduitgang').checked?1:0,aedInBuurt:document.getElementById('inpAED').checked?1:0,gsmBereik:document.getElementById('inpGSM').value,
+    hoofdFoto:hoofdFotoBlob,hoofdFotoType:'image/jpeg',extraFotos,gpxBlob:huidigeGpxBlob,
+    aktief:document.getElementById('inpAktief').checked?1:0,uitgelicht:document.getElementById('inpUitgelicht').checked?1:0,wijzigingsdatum:Date.now()
+  };
+  try{
+    if(bewerktEtappeID){await db.etappes.update(bewerktEtappeID,data);toon('Etappe opgeslagen ✓')}
+    else{data.aanmaakdatum=Date.now();await db.etappes.add(data);toon('Etappe toegevoegd ✓')}
+    await slaSnapshotOp();
+    setEtappeKnopStaat('saved');
+    setTimeout(()=>{sluitEtappeModal();toonWandelingInhoud(huidigeWandelingID);laadWandelingen()},600);
+  }catch(err){toon('❌ Fout: '+err.message);setEtappeKnopStaat('dirty')}
+}
+async function verwijderEtappe(id){bevestig('Verwijder deze etappe?',async()=>{await db.etappes.delete(id);await laadWandelingen();toonWandelingInhoud(huidigeWandelingID);toon('Etappe verwijderd')})}
+// ════════ VERREKIJKER OVERZICHT ════════
+async function openOverzicht(e,id){
+  if(e)e.stopPropagation();
+  const w=await db.wandelingen.get(id);if(!w)return;
+  const etappes=await db.etappes.where('wandelingID').equals(id).sortBy('volgorde');
+  const totKm=etappes.reduce((s,et)=>s+(parseFloat(et.afstand)||0),0);
+  const DIFF_N=['','Makkelijk','Gemiddeld','Matig','Moeilijk','Zwaar'];
+  const DIFF_K=['','#4CAF50','#8BC34A','#FFC107','#FF5722','#B71C1C'];
+
+  document.getElementById('ovTitel').textContent=w.naam;
+  const badge=document.getElementById('ovTypeBadge');
+  badge.textContent=w.type==='dag'?'Dagwandeling':'Meerdaagse';
+  badge.className='oh-badge '+(w.type==='dag'?'oh-badge-dag':'oh-badge-meer');
+  document.getElementById('ovRegio').innerHTML=w.regio?`📍 ${w.regio}`:'';
+  document.getElementById('ovTotaal').innerHTML=totKm>0?`📏 <strong>${totKm.toFixed(1)}</strong> km &nbsp;·&nbsp; ${etappes.length} etappe${etappes.length!==1?'s':''}`:
+    `${etappes.length} etappe${etappes.length!==1?'s':''}`;
+
+  const body=document.getElementById('overzichtBody');
+  body.innerHTML='';
+
+  // Beschrijving wandeling
+  if(w.beschrijving){
+    const d=document.createElement('div');d.className='ov-desc';d.textContent=w.beschrijving;body.appendChild(d);
+  }
+
+  if(!etappes.length){
+    const d=document.createElement('div');d.style.cssText='color:var(--stone);font-size:13px;padding:16px';d.textContent='Nog geen etappes toegevoegd.';body.appendChild(d);
+  }
+
+  for(const et of etappes){
+    // Icoontjes samenstellen
+    const icons=[];
+    if(et.rolstoel)      icons.push({i:'♿',t:'Rolstoel'});
+    if(et.rollator)      icons.push({i:'🦽',t:'Rollator'});
+    if(et.kinderwagen)   icons.push({i:'👶',t:'Kinderwagen'});
+    if(et.hond)          icons.push({i:'🐶',t:'Hond'});
+    if(et.stationsstapper)icons.push({i:'🚉',t:'Stationsstapper'});
+    if(et.parkingAanwezig)icons.push({i:'🅿️',t:'Parking'});
+    if(et.prikkelarm)    icons.push({i:'🤫',t:'Prikkelarm'});
+    if(et.geschiktCognitief)icons.push({i:'🧩',t:'Cognitief'});
+    if(et.rustMomentenVoorzien)icons.push({i:'⏸️',t:'Rustmomenten'});
+    if(et.vroegtijdigStoppen)icons.push({i:'🚪',t:'Vroegtijdig stoppen'});
+    if(et.toiletOnderweg)icons.push({i:'🚻',t:'Toilet'});
+    if(et.drinkwaterAanwezig)icons.push({i:'💧',t:'Drinkwater'});
+    if(et.schaduwAanwezig)icons.push({i:'🌳',t:'Schaduw'});
+    if(et.horecaOnderweg)icons.push({i:'☕',t:'Horeca'});
+    if(et.aedInBuurt)    icons.push({i:'❤️‍🩹',t:'AED'});
+    if(et.nooduitgangMogelijk)icons.push({i:'🚨',t:'Nooduitgang'});
+
+    const diff=et.moeilijkheid||0;
+    const diffBlokjes=`<div style="display:flex;gap:2px;align-items:center">
+      ${[1,2,3,4,5].map(n=>`<div style="width:14px;height:10px;border-radius:2px;background:${n<=diff?DIFF_K[diff]:'#e0e0e0'};border:1px solid ${n<=diff?DIFF_K[diff]:'#ccc'}"></div>`).join('')}
+      <span style="font-size:10px;color:var(--stone);margin-left:4px">${DIFF_N[diff]||''}</span>
+    </div>`;
+
+    const gsmKleur={goed:'#2e7d32',beperkt:'#f57f17',geen:'#c62828'}[et.gsmBereik]||'var(--stone)';
+    const statItems=[];
+    if(et.afstand&&et.afstand!=='—')statItems.push(`📏 <strong>${et.afstand}</strong> km`);
+    if(et.hoogteverschil&&et.hoogteverschil!=='—')statItems.push(`⛰️ <strong>${et.hoogteverschil}</strong> m`);
+    if(et.geschatdeTijd&&et.geschatdeTijd!=='—')statItems.push(`⏱️ <strong>${et.geschatdeTijd}</strong>`);
+    if(et.alpineSchaal)statItems.push(`<span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:#f3f3f3;border:1px solid #ddd">${et.alpineSchaal}</span>`);
+    if(et.gsmBereik)statItems.push(`<span style="font-size:10px;color:${gsmKleur}">📶 GSM: ${et.gsmBereik}</span>`);
+    if(et.routeType)statItems.push(`${et.routeType==='lus'?'🔄 Lus':'➡️ A→B'}`);
+
+    let fotoHTML=`<div class="ov-foto-ph">🌲</div>`;
+    if(et.hoofdFoto){const src=blobUrl(et.hoofdFoto,et.hoofdFotoType||'image/jpeg');fotoHTML=`<img src="${src}" alt="">`;}
+
+    const row=document.createElement('div');row.className='ov-etappe';
+    row.innerHTML=`
+      <div class="ov-foto">
+        ${fotoHTML}
+        ${w.type==='meerdaagse'?`<span class="ov-num">Etappe ${et.volgorde||'—'}</span>`:''}
+      </div>
+      <div class="ov-info">
+        <div class="ov-naam">${et.titel||'Naamloos'}</div>
+        <div class="ov-stats">${statItems.join('<span style="color:#ddd">·</span>')}</div>
+        ${diffBlokjes}
+        ${et.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 ${et.startAdres}</div>`:''}
+        ${et.beschrijving?`<div style="font-size:11px;color:var(--stone);line-height:1.5;margin-top:3px">${et.beschrijving.substring(0,120)}${et.beschrijving.length>120?'…':''}</div>`:''}
+      </div>
+      <div class="ov-icons">
+        <div style="font-size:9px;color:var(--stone);text-transform:uppercase;letter-spacing:.8px;font-weight:500;margin-bottom:4px">Kenmerken</div>
+        <div class="ov-icon-row">${icons.map(ic=>`<span class="ov-icon" title="${ic.t}">${ic.i}</span>`).join('')||'<span style="font-size:10px;color:var(--stone)">—</span>'}</div>
+      </div>`;
+    body.appendChild(row);
+  }
+  document.getElementById('overzichtBg').classList.add('open');
+}
+
+function toonFiche(id){toon('📄 Wandelfiche komt in fase 2!')}
+
+// ════════ RESET ════════
+async function wisDatabase(){
+  bevestig('Hele database wissen? Dit kan niet ongedaan worden gemaakt.',async()=>{
+    await db.etappes.clear();await db.wandelingen.clear();huidigeWandelingID=null;
+    localStorage.removeItem('nv_snapshot');
+    await laadWandelingen();document.getElementById('mainContent').innerHTML=leegScherm('Database gewist','Voeg een nieuwe wandeling toe.');toon('Database gewist');
+  });
+}
+
+// ════════ OPSTART ════════
+(async()=>{
+  await laadWandelingen();
+  await vraagPersistentieAan();
+  await controleerDataIntegriteit();
+  bijwerkExportInfo();
+})();
+</script>
+</body>
+</html>
