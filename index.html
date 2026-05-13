@@ -29,19 +29,49 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .sb-label{font-size:10px;font-weight:500;letter-spacing:1.6px;text-transform:uppercase;color:var(--sage);padding:0 6px;margin-bottom:6px}
 .sb-new-btn{width:100%;background:var(--leaf);border:none;border-radius:9px;padding:11px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:7px}
 .sb-new-btn:hover{background:var(--sage)}
-.wand-item{display:flex;align-items:center;gap:7px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background .15s;color:rgba(255,255,255,.72);font-size:13px;user-select:none}
+.wand-item{display:flex;align-items:center;gap:7px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background .15s;color:rgba(255,255,255,.72);font-size:13px;user-select:none;position:relative}
 .wand-item:hover{background:rgba(255,255,255,.08);color:#fff}
 .wand-item.active{background:var(--fern);color:#fff;font-weight:500}
 .wand-type-pill{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;letter-spacing:.4px;flex-shrink:0}
 .pill-dag{background:rgba(122,184,146,.25);color:var(--sage)}
 .pill-meer{background:rgba(212,160,23,.2);color:#d4a017}
-.wand-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wand-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wand-km{font-size:9px;color:rgba(255,255,255,.4);flex-shrink:0;white-space:nowrap}
 .wand-cnt{font-size:10px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.5);padding:1px 6px;border-radius:10px;flex-shrink:0}
-.wand-actions{display:none;gap:2px}
+.wand-actions{display:none;gap:2px;flex-shrink:0}
 .wand-item:hover .wand-actions,.wand-item.active .wand-actions{display:flex}
+.wand-item:hover .wand-km,.wand-item.active .wand-km{display:none}
 .wa-btn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.5);font-size:13px;padding:2px 5px;border-radius:4px;transition:color .12s;line-height:1}
 .wa-btn:hover{color:#fff}
 .wa-btn.del:hover{color:#ff7070}
+
+/* Scrollbare wandelingenlijst */
+#wandelingList{overflow-y:auto;max-height:calc(100vh - 220px);padding-right:2px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+#wandelingList::-webkit-scrollbar{width:4px}
+#wandelingList::-webkit-scrollbar-track{background:transparent}
+#wandelingList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+#wandelingList::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
+
+/* Custom tooltip */
+.wand-tooltip{
+  position:fixed;
+  background:rgba(15,35,22,.95);
+  color:#fff;
+  font-size:12px;
+  padding:7px 12px;
+  border-radius:8px;
+  pointer-events:none;
+  z-index:999;
+  white-space:nowrap;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.1);
+  opacity:0;
+  transition:opacity .15s;
+  max-width:260px;
+  white-space:normal;
+  line-height:1.4;
+}
+.wand-tooltip.zichtbaar{opacity:1}
 .sb-reset{background:none;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.35);font-size:11px;padding:5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;text-align:center;margin-top:auto}
 .sb-reset:hover{color:#ff9999;border-color:#ff9999}
 
@@ -798,6 +828,7 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
   <img id="pvImg" src="" alt="">
 </div>
 <div class="toast" id="toast"></div>
+<div class="wand-tooltip" id="wandTooltip"></div>
 
 <script>
 // ════════ DATABASE ════════
@@ -1223,16 +1254,71 @@ async function laadWandelingen(){
   list.innerHTML='';
   if(!items.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;padding:6px 8px">Nog geen wandelingen</div>';return}
   for(const w of items){
-    const cnt=await db.etappes.where('wandelingID').equals(w.wandelingID).count();
+    const cnt    = await db.etappes.where('wandelingID').equals(w.wandelingID).count();
+    const etaps  = await db.etappes.where('wandelingID').equals(w.wandelingID).toArray();
+    const totKm  = etaps.reduce((s,e)=>s+(parseFloat(e.afstand)||0),0);
+    const kmTxt  = totKm>0 ? `${totKm.toFixed(1)} km` : '';
+    // Tooltip tekst: naam + regio + km
+    const tooltipTekst = [
+      w.naam,
+      w.regio ? `📍 ${w.regio}` : '',
+      kmTxt   ? `📏 ${kmTxt}`  : '',
+      `${cnt} etappe${cnt!==1?'s':''}`
+    ].filter(Boolean).join('\n');
+
     const div=document.createElement('div');
     div.className='wand-item'+(w.wandelingID===huidigeWandelingID?' active':'');
-    div.innerHTML=`<span class="wand-type-pill ${w.type==='dag'?'pill-dag':'pill-meer'}">${w.type==='dag'?'DAG':'MEER'}</span><span class="wand-name">${w.naam}</span><span class="wand-cnt">${cnt}</span><span class="wand-actions"><button class="wa-btn" title="Overzicht bekijken" onclick="openOverzicht(event,${w.wandelingID})">🔭</button><button class="wa-btn" title="Bewerken" onclick="openBewerkWandeling(event,${w.wandelingID})">✎</button><button class="wa-btn del" title="Verwijderen" onclick="verwijderWandeling(event,${w.wandelingID})">✕</button></span>`;
+    div.dataset.tooltip=tooltipTekst;
+    div.innerHTML=`
+      <span class="wand-type-pill ${w.type==='dag'?'pill-dag':'pill-meer'}">${w.type==='dag'?'DAG':'MEER'}</span>
+      <span class="wand-name">${w.naam}</span>
+      ${kmTxt?`<span class="wand-km">${kmTxt}</span>`:''}
+      <span class="wand-cnt">${cnt}</span>
+      <span class="wand-actions">
+        <button class="wa-btn" aria-label="Overzicht" onclick="openOverzicht(event,${w.wandelingID})">🔭</button>
+        <button class="wa-btn" aria-label="Bewerken" onclick="openBewerkWandeling(event,${w.wandelingID})">✎</button>
+        <button class="wa-btn del" aria-label="Verwijderen" onclick="verwijderWandeling(event,${w.wandelingID})">✕</button>
+      </span>`;
     div.addEventListener('click',e=>{if(e.target.classList.contains('wa-btn'))return;selecteerWandeling(w.wandelingID)});
+    // Tooltip events
+    div.addEventListener('mouseenter', toonWandTooltip);
+    div.addEventListener('mousemove',  beweegWandTooltip);
+    div.addEventListener('mouseleave', verbergWandTooltip);
     list.appendChild(div);
   }
 }
 
 async function selecteerWandeling(id){huidigeWandelingID=id;await laadWandelingen();toonWandelingInhoud(id)}
+
+// ════════ SIDEBAR TOOLTIP ════════
+let tooltipTimer;
+function toonWandTooltip(e){
+  const tekst = e.currentTarget.dataset.tooltip;
+  if(!tekst) return;
+  const tip = document.getElementById('wandTooltip');
+  // Vervang newlines door <br>
+  tip.innerHTML = tekst.replace(/\n/g,'<br>');
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(()=>tip.classList.add('zichtbaar'), 400);
+  plaatsTooltip(e);
+}
+function beweegWandTooltip(e){
+  plaatsTooltip(e);
+}
+function plaatsTooltip(e){
+  const tip = document.getElementById('wandTooltip');
+  const x = e.clientX + 16;
+  const y = e.clientY - 10;
+  // Zorg dat tooltip niet buiten het scherm valt
+  const maxX = window.innerWidth  - tip.offsetWidth  - 8;
+  const maxY = window.innerHeight - tip.offsetHeight - 8;
+  tip.style.left = Math.min(x, maxX) + 'px';
+  tip.style.top  = Math.min(y, maxY) + 'px';
+}
+function verbergWandTooltip(){
+  clearTimeout(tooltipTimer);
+  document.getElementById('wandTooltip').classList.remove('zichtbaar');
+}
 
 async function toonWandelingInhoud(id){
   const w=await db.wandelingen.get(id);if(!w)return;
