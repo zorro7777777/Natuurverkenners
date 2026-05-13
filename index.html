@@ -236,6 +236,25 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .pt-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 #modalMap{height:190px;border-radius:8px;border:1.5px solid var(--mist);margin-top:4px}
 
+/* ── MULTI-SEGMENT GPX MODAL ── */
+.seg-modal-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.65);z-index:250;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.seg-modal-bg.open{display:flex}
+.seg-modal{background:#fff;border-radius:16px;width:100%;max-width:680px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;animation:slideUp .22s ease;flex-shrink:0}
+.seg-modal-head{background:var(--moss);padding:16px 22px;display:flex;align-items:center;gap:12px}
+.seg-modal-head h3{font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:#fff;flex:1}
+.seg-body{padding:20px;display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto}
+.seg-row{background:#f8faf9;border:1.5px solid var(--mist);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:28px 1fr;align-items:start;gap:12px}
+.seg-num{width:28px;height:28px;background:var(--fern);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:2px}
+.seg-info{display:flex;flex-direction:column;gap:6px}
+.seg-naam-inp{border:1.5px solid var(--mist);border-radius:7px;padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--moss);width:100%;transition:border-color .12s}
+.seg-naam-inp:focus{outline:none;border-color:var(--leaf)}
+.seg-stats{display:flex;gap:10px;font-size:11px;color:var(--stone);flex-wrap:wrap}
+.seg-stats strong{color:var(--fern)}
+.seg-adres{font-size:11px;color:var(--stone);display:flex;flex-direction:column;gap:3px;margin-top:2px}
+.seg-adres .laden{color:var(--sage);font-style:italic}
+.seg-foot{padding:14px 22px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.seg-info-txt{font-size:12px;color:var(--stone)}
+
 /* CONFIRM */
 /* VERREKIJKER OVERZICHT MODAL */
 .overzicht-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.65);z-index:250;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
@@ -400,6 +419,11 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
           <div class="field-label">GPX bestand</div>
           <input type="file" id="gpxInput" accept=".gpx" onchange="verwerkGPX(this);etappeDirty(0)">
           <div id="gpxError" class="error-msg">Ongeldig GPX-bestand (min. 2 trackpunten vereist).</div>
+          <div id="segmentMelding" style="display:none;margin-top:6px;background:#e8f5e9;border-radius:8px;padding:10px 14px;font-size:12px;color:#2e7d32;align-items:center;gap:8px">
+            <span aria-hidden="true">🗺️</span>
+            <span id="segmentMeldingTxt" style="flex:1"></span>
+            <button onclick="herOpenSegModal()" style="background:var(--fern);border:none;border-radius:6px;padding:4px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:500">Bekijk segmenten</button>
+          </div>
           <div class="gpx-stats" id="gpxStats" style="display:none">
             <span class="gpx-stat">📏 <strong id="statAfstand">—</strong> km</span>
             <span class="gpx-stat">📍 <strong id="statPunten">—</strong> punten</span>
@@ -419,6 +443,10 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
         <div class="field">
           <div class="field-label">Startadres (automatisch)</div>
           <input type="text" id="inpAdres" readonly>
+        </div>
+        <div class="field">
+          <div class="field-label">Eindadres (automatisch)</div>
+          <input type="text" id="inpEindAdres" readonly placeholder="Verschijnt na GPX import…">
         </div>
         <div class="field">
           <div class="field-label">Regio / streek</div>
@@ -736,6 +764,24 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
       <button class="modal-close" onclick="document.getElementById('overzichtBg').classList.remove('open')">×</button>
     </div>
     <div class="overzicht-body" id="overzichtBody"></div>
+  </div>
+</div>
+
+<!-- MULTI-SEGMENT GPX MODAL -->
+<div class="seg-modal-bg" id="segModal">
+  <div class="seg-modal">
+    <div class="seg-modal-head">
+      <h3 id="segModalTitel">GPX segmenten gevonden</h3>
+      <button class="modal-close" onclick="document.getElementById('segModal').classList.remove('open')">×</button>
+    </div>
+    <div class="seg-body" id="segBody"></div>
+    <div class="seg-foot">
+      <span class="seg-info-txt" id="segInfoTxt"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="document.getElementById('segModal').classList.remove('open')">Annuleren</button>
+        <button class="btn-save" id="segAanmaakBtn" onclick="maakSegmentEtappes()">Etappes aanmaken</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1212,6 +1258,8 @@ async function toonWandelingInhoud(id){
       <div class="card-body">
         <div class="card-title">${e.titel||'Naamloos'}</div>
         <div class="card-stats"><span>📏 <strong>${e.afstand||'—'}</strong> km</span>${e.hoogteverschil&&e.hoogteverschil!=='—'?`<span>⛰️ <strong>${e.hoogteverschil}</strong> m</span>`:''} ${e.geschatdeTijd&&e.geschatdeTijd!=='—'?`<span>⏱️ <strong>${e.geschatdeTijd}</strong></span>`:''}</div>
+        ${e.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 ${e.startAdres}</div>`:''}
+        ${e.eindAdres&&e.eindAdres!==e.startAdres?`<div style="font-size:10px;color:var(--stone)">🏁 ${e.eindAdres}</div>`:''}
         <div class="card-tags"><div class="diff-blocks" data-level="${e.moeilijkheid||0}"><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div></div>${e.alpineSchaal?`<span class="alpine-pill">${e.alpineSchaal}</span>`:''} ${tags.join('')}</div>
         ${e.beschrijving?`<div class="card-desc">${e.beschrijving.substring(0,90)}${e.beschrijving.length>90?'…':''}</div>`:''}
         <div class="card-footer">
@@ -1360,7 +1408,9 @@ async function verwijderWandeling(e,id){
 // ════════ ETAPPE MODAL ════════
 function resetEtappeModal(){
   bewerktEtappeID=null;huidigeGpxBlob=null;extraFotos=[];hoofdFotoBlob=null;editorImg=null;editorOpen=false;moeilijkheid=0;tabDirty.clear();
-  ['inpTitel','inpAdres','inpRegio','inpProvincie','inpBeschrijving','inpAlpine','inpOndergrond','inpPadbreedte','inpSociaalDruk','inpVoorspelbaar','inpMentaal','inpPsychNotities','inpGSM','inpMaxGroep','inpBegeleiders','inpAantalRust','infoAanmaak','infoWijziging'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  ['inpTitel','inpAdres','inpEindAdres','inpRegio','inpProvincie','inpBeschrijving','inpAlpine','inpOndergrond','inpPadbreedte','inpSociaalDruk','inpVoorspelbaar','inpMentaal','inpPsychNotities','inpGSM','inpMaxGroep','inpBegeleiders','inpAantalRust','infoAanmaak','infoWijziging'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('segmentMelding').style.display='none';
+  gpxSegmenten=[];
   ['gpxInput','hoofdfotoInput','fotoInput'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   document.getElementById('gpxStats').style.display='none';
   document.getElementById('gpxError').style.display='none';
@@ -1392,6 +1442,7 @@ async function openBewerkEtappe(id){
   document.getElementById('etappeModalTitel').textContent='Etappe bewerken';
   document.getElementById('inpTitel').value=e.titel||'';
   document.getElementById('inpAdres').value=e.startAdres||'';
+  document.getElementById('inpEindAdres').value=e.eindAdres||'';
   document.getElementById('inpRegio').value=e.regio||'';
   document.getElementById('inpProvincie').value=e.provincie||'';
   document.getElementById('inpBeschrijving').value=e.beschrijving||'';
@@ -1425,36 +1476,302 @@ async function openBewerkEtappe(id){
 }
 function sluitEtappeModal(){document.getElementById('etappeModal').classList.remove('open')}
 
-// ════════ GPX ════════
-async function verwerkGPX(input){
-  const file=input.files[0];if(!file)return;
-  document.getElementById('gpxError').style.display='none';
-  const text=await file.text();
-  const xml=new DOMParser().parseFromString(text,'text/xml');
-  const naam=xml.querySelector('trk > name')?.textContent||'';
-  const pts=xml.querySelectorAll('trkpt');
-  if(pts.length<2){document.getElementById('gpxError').style.display='block';return}
-  huidigeGpxBlob=await file.arrayBuffer();
-  if(naam&&!document.getElementById('inpTitel').value)document.getElementById('inpTitel').value=naam;
-  const lat0=parseFloat(pts[0].getAttribute('lat')),lng0=parseFloat(pts[0].getAttribute('lon'));
-  let dist=0,stijging=0;
-  const arr=[...pts].map(p=>({lat:parseFloat(p.getAttribute('lat')),lon:parseFloat(p.getAttribute('lon')),ele:parseFloat(p.querySelector('ele')?.textContent||0)||0}));
-  for(let i=0;i<arr.length-1;i++){dist+=haversine(arr[i].lat,arr[i].lon,arr[i+1].lat,arr[i+1].lon);const d=arr[i+1].ele-arr[i].ele;if(d>0)stijging+=d}
-  const distKm=dist.toFixed(2),stijgM=Math.round(stijging),pct=dist>0?(stijging/(dist*1000)*100).toFixed(1):0;
-  const min=Math.round((dist/5+stijging/300)*60),tijd=`${Math.floor(min/60)}u${String(min%60).padStart(2,'0')}`;
-  document.getElementById('statAfstand').textContent=distKm;document.getElementById('statPunten').textContent=pts.length;document.getElementById('statHoogte').textContent=stijgM;document.getElementById('statStijging').textContent=pct;document.getElementById('statTijd').textContent=tijd;document.getElementById('gpxStats').style.display='flex';
-  initMap();modalMap.setView([lat0,lng0],14);if(modalMarker)modalMap.removeLayer(modalMarker);modalMarker=L.marker([lat0,lng0]).addTo(modalMap);
-  try{
-    const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat0}&lon=${lng0}&zoom=19&addressdetails=1`);
-    const data=await res.json();const a=data.address;
-    document.getElementById('inpAdres').value=`${a.road||''} ${a.house_number||''}, ${a.postcode||''} ${a.city||a.town||a.village||''} [${(a.country_code||'').toUpperCase()}]`.trim().replace(/^,\s*/,'');
-    if(!document.getElementById('inpRegio').value)document.getElementById('inpRegio').value=a.county||a.state||'';
-    if(!document.getElementById('inpProvincie').value)document.getElementById('inpProvincie').value=a.state||'';
-  }catch{document.getElementById('inpAdres').value=`${lat0.toFixed(5)}, ${lng0.toFixed(5)}`}
-  // Titel ingevuld = knop actief
-  if(document.getElementById('inpTitel').value.trim())etappeDirty(0);
+// ════════ GPX KERN HELPERS ════════
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dl=(lat2-lat1)*Math.PI/180,dL=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dl/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dL/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function haversine(lat1,lon1,lat2,lon2){const R=6371,dl=(lat2-lat1)*Math.PI/180,dL=(lon2-lon1)*Math.PI/180,a=Math.sin(dl/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dL/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
+
+function berekenSegmentStats(punten){
+  // punten = [{lat,lon,ele}]
+  let dist=0,stijging=0;
+  for(let i=0;i<punten.length-1;i++){
+    dist+=haversine(punten[i].lat,punten[i].lon,punten[i+1].lat,punten[i+1].lon);
+    const d=punten[i+1].ele-punten[i].ele;
+    if(d>0) stijging+=d;
+  }
+  const min=Math.round((dist/5+stijging/300)*60);
+  return {
+    dist:    dist.toFixed(2),
+    stijgM:  Math.round(stijging),
+    pct:     dist>0?(stijging/(dist*1000)*100).toFixed(1):'0',
+    tijd:    `${Math.floor(min/60)}u${String(min%60).padStart(2,'0')}`,
+    aantalPunten: punten.length
+  };
+}
+
+function puntUitTrkpt(p){
+  return {
+    lat: parseFloat(p.getAttribute('lat')),
+    lon: parseFloat(p.getAttribute('lon')),
+    ele: parseFloat(p.querySelector('ele')?.textContent||0)||0
+  };
+}
+
+async function geocodeer(lat,lng){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`);
+    const d=await r.json();
+    const a=d.address;
+    return `${a.road||''} ${a.house_number||''}, ${a.postcode||''} ${a.city||a.town||a.village||a.hamlet||''} [${(a.country_code||'').toUpperCase()}]`
+      .replace(/\s+/g,' ').trim().replace(/^,\s*/,'');
+  } catch {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
+}
+
+// ════════ GPX VERWERKING ════════
+// Globale buffer voor multi-segment GPX
+let gpxSegmenten = [];   // [{naam, punten, stats, gpxBlob}]
+let gpxHeleBlob  = null; // ArrayBuffer van het volledige bestand
+
+async function verwerkGPX(input){
+  const file=input.files[0]; if(!file) return;
+  document.getElementById('gpxError').style.display='none';
+  document.getElementById('segmentMelding').style.display='none';
+  gpxSegmenten=[];
+
+  const text  = await file.text();
+  const xml   = new DOMParser().parseFromString(text,'text/xml');
+  gpxHeleBlob = await file.arrayBuffer();
+
+  // Verzamel alle segmenten uit alle <trk> elementen
+  const trks  = [...xml.querySelectorAll('trk')];
+  const trkNaam = xml.querySelector('trk > name')?.textContent||'';
+
+  const alleSegmenten = [];
+  for(const trk of trks){
+    const trkNaamEl = trk.querySelector('name')?.textContent||'';
+    const segs = [...trk.querySelectorAll('trkseg')];
+    for(let si=0;si<segs.length;si++){
+      const segNaamEl = segs[si].querySelector('name')?.textContent||'';
+      const punten = [...segs[si].querySelectorAll('trkpt')].map(puntUitTrkpt);
+      if(punten.length < 2) continue;
+      // Naam prioriteit: segment name > trk name > fallback
+      const naam = segNaamEl || (segs.length===1 ? trkNaamEl : '') || '';
+      alleSegmenten.push({ naam, punten, trkNaam: trkNaamEl });
+    }
+  }
+
+  if(alleSegmenten.length === 0){
+    document.getElementById('gpxError').style.display='block'; return;
+  }
+
+  // ENKELVOUDIGE GPX (1 segment) — gewone verwerking
+  if(alleSegmenten.length === 1){
+    await verwerkEnkelSegment(alleSegmenten[0], gpxHeleBlob, trkNaam);
+    return;
+  }
+
+  // MEERDERE SEGMENTEN — toon preview modal
+  gpxSegmenten = alleSegmenten;
+  await toonSegmentModal(gpxSegmenten);
+}
+
+async function verwerkEnkelSegment(seg, gpxBlob, fallbackNaam){
+  const {punten} = seg;
+  const naam = seg.naam || fallbackNaam || '';
+  const stats = berekenSegmentStats(punten);
+  const {lat:lat0, lon:lng0} = punten[0];
+  const {lat:latE, lon:lngE} = punten[punten.length-1];
+
+  huidigeGpxBlob = gpxBlob;
+  if(naam && !document.getElementById('inpTitel').value)
+    document.getElementById('inpTitel').value = naam;
+
+  // Stats tonen
+  document.getElementById('statAfstand').textContent  = stats.dist;
+  document.getElementById('statPunten').textContent   = stats.aantalPunten;
+  document.getElementById('statHoogte').textContent   = stats.stijgM;
+  document.getElementById('statStijging').textContent = stats.pct;
+  document.getElementById('statTijd').textContent     = stats.tijd;
+  document.getElementById('gpxStats').style.display   = 'flex';
+
+  // Kaart
+  initMap();
+  modalMap.setView([lat0,lng0],13);
+  if(modalMarker) modalMap.removeLayer(modalMarker);
+  modalMarker = L.marker([lat0,lng0]).addTo(modalMap);
+
+  // Startadres
+  const startAdres = await geocodeer(lat0,lng0);
+  document.getElementById('inpAdres').value = startAdres;
+
+  // Eindadres — enkel tonen als niet dezelfde locatie als start (lus-detectie: <200m)
+  const eindAdresEl = document.getElementById('inpEindAdres');
+  const afstandLus  = haversine(lat0,lng0,latE,lngE);
+  if(afstandLus < 0.2){
+    eindAdresEl.value = '🔄 Luswandeling — zelfde als startpunt';
+  } else {
+    eindAdresEl.value = await geocodeer(latE,lngE);
+  }
+
+  // Regio automatisch
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat0}&lon=${lng0}&zoom=10&addressdetails=1`);
+    const d=await r.json(); const a=d.address;
+    if(!document.getElementById('inpRegio').value)
+      document.getElementById('inpRegio').value=a.county||a.state||'';
+    if(!document.getElementById('inpProvincie').value)
+      document.getElementById('inpProvincie').value=a.state||'';
+  } catch {}
+
+  if(document.getElementById('inpTitel').value.trim()) etappeDirty(0);
+}
+
+// ════════ MULTI-SEGMENT MODAL ════════
+async function toonSegmentModal(segmenten){
+  const w = await db.wandelingen.get(huidigeWandelingID);
+  const bestaandeCnt = await db.etappes.where('wandelingID').equals(huidigeWandelingID).count();
+
+  document.getElementById('segModalTitel').textContent =
+    `${segmenten.length} segmenten gevonden`;
+  document.getElementById('segInfoTxt').textContent =
+    `Geeft ${segmenten.length} etappes vanaf etappe ${bestaandeCnt+1}`;
+  document.getElementById('segAanmaakBtn').textContent =
+    `${segmenten.length} etappes aanmaken`;
+
+  const body = document.getElementById('segBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--stone);font-size:13px">⏳ Adressen ophalen…</div>';
+  document.getElementById('segModal').classList.add('open');
+
+  // Geocodeer alle segmenten in de achtergrond
+  const rijen = [];
+  for(let i=0;i<segmenten.length;i++){
+    const seg   = segmenten[i];
+    const stats = berekenSegmentStats(seg.punten);
+    const start = seg.punten[0];
+    const eind  = seg.punten[seg.punten.length-1];
+    const afstandLus = haversine(start.lat,start.lon,eind.lat,eind.lon);
+    const isLus = afstandLus < 0.2;
+    seg._stats   = stats;
+    seg._startLat= start.lat; seg._startLng=start.lon;
+    seg._eindLat = eind.lat;  seg._eindLng =eind.lon;
+    seg._isLus   = isLus;
+    rijen.push({seg, stats, start, eind, isLus, idx:i});
+  }
+
+  // Toon rijen zonder adressen eerst
+  renderSegRijen(rijen, bestaandeCnt);
+
+  // Haal adressen op en update rijen (met kleine pauze tussen calls)
+  for(const rij of rijen){
+    rij.startAdres = await geocodeer(rij.start.lat, rij.start.lon);
+    rij.seg._startAdres = rij.startAdres;
+    if(!rij.isLus){
+      await new Promise(r=>setTimeout(r,300)); // respecteer Nominatim rate limit
+      rij.eindAdres = await geocodeer(rij.eind.lat, rij.eind.lon);
+      rij.seg._eindAdres = rij.eindAdres;
+    } else {
+      rij.eindAdres = '🔄 Luswandeling';
+      rij.seg._eindAdres = rij.eindAdres;
+    }
+    // Update enkel de adres-div van deze rij
+    const adresEl = document.getElementById(`seg-adres-${rij.idx}`);
+    if(adresEl){
+      adresEl.innerHTML = `
+        <span>📍 Start: ${rij.startAdres}</span>
+        <span>🏁 Einde: ${rij.eindAdres}</span>`;
+    }
+  }
+}
+
+function renderSegRijen(rijen, bestaandeCnt){
+  const body = document.getElementById('segBody');
+  body.innerHTML = '';
+  for(const rij of rijen){
+    const {seg,stats,idx} = rij;
+    const volgnr = bestaandeCnt + idx + 1;
+    const defaultNaam = seg.naam || `Etappe ${volgnr}`;
+    const div = document.createElement('div');
+    div.className = 'seg-row';
+    div.innerHTML = `
+      <div class="seg-num">${volgnr}</div>
+      <div class="seg-info">
+        <input class="seg-naam-inp" id="seg-naam-${idx}" value="${defaultNaam}" placeholder="Naam etappe…">
+        <div class="seg-stats">
+          <span>📏 <strong>${stats.dist}</strong> km</span>
+          <span>⛰️ <strong>${stats.stijgM}</strong> m</span>
+          <span>⏱️ <strong>${stats.tijd}</strong></span>
+          <span>📍 <strong>${stats.aantalPunten}</strong> punten</span>
+        </div>
+        <div class="seg-adres laden" id="seg-adres-${idx}">Adres ophalen…</div>
+      </div>`;
+    body.appendChild(div);
+  }
+}
+
+function herOpenSegModal(){
+  document.getElementById('segModal').classList.add('open');
+}
+
+async function maakSegmentEtappes(){
+  if(!gpxSegmenten.length) return;
+  const btn = document.getElementById('segAanmaakBtn');
+  btn.disabled=true; btn.textContent='Aanmaken…';
+
+  const w = await db.wandelingen.get(huidigeWandelingID);
+  const bestaandeCnt = await db.etappes.where('wandelingID').equals(huidigeWandelingID).count();
+
+  let aangemaakt = 0;
+  for(let i=0;i<gpxSegmenten.length;i++){
+    const seg    = gpxSegmenten[i];
+    const stats  = seg._stats || berekenSegmentStats(seg.punten);
+    const naam   = document.getElementById(`seg-naam-${i}`)?.value.trim() || `Etappe ${bestaandeCnt+i+1}`;
+
+    // Maak een GPX-blob van enkel dit segment
+    const segGpxTxt = bouwSegmentGPX(naam, seg.punten);
+    const segGpxBuf = new TextEncoder().encode(segGpxTxt).buffer;
+
+    await db.etappes.add({
+      wandelingID:   huidigeWandelingID,
+      volgorde:      bestaandeCnt + i + 1,
+      titel:         naam,
+      afstand:       stats.dist,
+      gpxPunten:     stats.aantalPunten,
+      hoogteverschil:stats.stijgM,
+      stijgingsPct:  stats.pct,
+      geschatdeTijd: stats.tijd,
+      startAdres:    seg._startAdres||'',
+      eindAdres:     seg._eindAdres||'',
+      startLat:      seg._startLat,
+      startLng:      seg._startLng,
+      eindLat:       seg._eindLat,
+      eindLng:       seg._eindLng,
+      gpxBlob:       segGpxBuf,
+      aktief:        1,
+      aanmaakdatum:  Date.now(),
+      wijzigingsdatum:Date.now()
+    });
+    aangemaakt++;
+  }
+
+  verhoogWijzigingsTeller();
+  await slaSnapshotOp();
+  document.getElementById('segModal').classList.remove('open');
+  sluitEtappeModal();
+  await toonWandelingInhoud(huidigeWandelingID);
+  await laadWandelingen();
+  toon(`✅ ${aangemaakt} etappes aangemaakt — vul kenmerken aan per etappe`);
+
+  btn.disabled=false;
+  btn.textContent=`${gpxSegmenten.length} etappes aanmaken`;
+  gpxSegmenten=[];
+}
+
+function bouwSegmentGPX(naam, punten){
+  const pts = punten.map(p=>`    <trkpt lat="${p.lat}" lon="${p.lon}">${p.ele?`<ele>${p.ele}</ele>`:''}</trkpt>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Natuurverkenners">
+  <trk>
+    <name>${naam}</name>
+    <trkseg>
+${pts}
+    </trkseg>
+  </trk>
+</gpx>`;
+}
 
 // ════════ HOOFDFOTO ════════
 async function verwerkHoofdFoto(input){
@@ -1569,7 +1886,7 @@ async function saveEtappe(){
     wandelingID:huidigeWandelingID,volgorde:bewerktEtappeID?undefined:cnt+1,titel,
     afstand:document.getElementById('statAfstand').textContent,gpxPunten:document.getElementById('statPunten').textContent,
     hoogteverschil:document.getElementById('statHoogte').textContent,stijgingsPct:document.getElementById('statStijging').textContent,geschatdeTijd:document.getElementById('statTijd').textContent,
-    startAdres:document.getElementById('inpAdres').value,startLat:modalMarker?modalMarker.getLatLng().lat:null,startLng:modalMarker?modalMarker.getLatLng().lng:null,
+    startAdres:document.getElementById('inpAdres').value,eindAdres:document.getElementById('inpEindAdres').value,startLat:modalMarker?modalMarker.getLatLng().lat:null,startLng:modalMarker?modalMarker.getLatLng().lng:null,
     regio:document.getElementById('inpRegio').value,provincie:document.getElementById('inpProvincie').value,beschrijving:document.getElementById('inpBeschrijving').value,
     routeType:getPills('routetype')[0]||'',navigatiemethode:getPills('navigatie'),moeilijkheid,alpineSchaal:document.getElementById('inpAlpine').value,
     ondergrond:document.getElementById('inpOndergrond').value,padBreedte:document.getElementById('inpPadbreedte').value,besteSeizoen:getPills('seizoen'),omgevingstype:getPills('omgeving'),
@@ -1675,12 +1992,13 @@ async function openOverzicht(e,id){
         <div class="ov-naam">${et.titel||'Naamloos'}</div>
         <div class="ov-stats">${statItems.join('<span style="color:#ddd">·</span>')}</div>
         ${diffBlokjes}
-        ${et.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 ${et.startAdres}</div>`:''}
+        ${et.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 Start: ${et.startAdres}</div>`:''}
+        ${et.eindAdres&&et.eindAdres!==et.startAdres?`<div style="font-size:10px;color:var(--stone)">🏁 Einde: ${et.eindAdres}</div>`:''}
         ${et.beschrijving?`<div style="font-size:11px;color:var(--stone);line-height:1.5;margin-top:3px">${et.beschrijving.substring(0,120)}${et.beschrijving.length>120?'…':''}</div>`:''}
       </div>
       <div class="ov-icons">
         <div style="font-size:9px;color:var(--stone);text-transform:uppercase;letter-spacing:.8px;font-weight:500;margin-bottom:4px">Kenmerken</div>
-        <div class="ov-icon-row">${icons.map(ic=>`<span class="ov-icon" title="${ic.t}">${ic.i}</span>`).join('')||'<span style="font-size:10px;color:var(--stone)">—</span>'}</div>
+        <div class="ov-icon-row">${icons.map(ic=>`<span class="ov-icon" aria-hidden="true" style="pointer-events:none;user-select:none">${ic.i}</span>`).join('')||'<span style="font-size:10px;color:var(--stone)">—</span>'}</div>
       </div>`;
     body.appendChild(row);
   }
@@ -1703,7 +2021,7 @@ async function wisDatabase(){
   await laadWandelingen();
   await vraagPersistentieAan();
   await controleerDataIntegriteit();
-  bijwerkExportInfo();
+  bijwerkExportKnop();
 })();
 </script>
 </body>
