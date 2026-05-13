@@ -407,8 +407,8 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
         <input type="text" id="wandNaam" placeholder="bijv. Bosrand Heverlee of GR 5 Ardennen" oninput="wandDirty()">
       </div>
       <div class="field">
-        <div class="field-label">Regio / streek</div>
-        <input type="text" id="wandRegio" placeholder="bijv. Ardennen, Kempen, Kust…" oninput="wandDirty()">
+        <div class="field-label">Natuurgebied</div>
+        <input type="text" id="wandRegio" placeholder="bijv. Hoge Venen, Zoniënwoud, Kalmthoutse Heide…" oninput="wandDirty()">
       </div>
       <div class="field">
         <div class="field-label">Beschrijving</div>
@@ -1438,7 +1438,7 @@ async function openBewerkWandelingInline(id){
           <input type="text" id="wepNaam" value="${w.naam||''}" oninput="wepCheckDirty()">
         </div>
         <div class="field">
-          <div class="field-label">Regio / streek</div>
+          <div class="field-label">Natuurgebied</div>
           <input type="text" id="wepRegio" value="${w.regio||''}" oninput="wepCheckDirty()">
         </div>
         <div class="field">
