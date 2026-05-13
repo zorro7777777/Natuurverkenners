@@ -9,7 +9,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --moss:#1a3a2a;--fern:#2d5a3d;--leaf:#4a8c5c;--sage:#7ab892;
@@ -244,7 +246,53 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .rv-close{background:none;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 14px;color:rgba(255,255,255,.7);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s}
 .rv-close:hover{color:#fff;border-color:#fff}
 .rv-body{flex:1;display:grid;grid-template-rows:1fr 260px;min-height:0}
-#rvMap{width:100%;height:100%;min-height:0}
+#rvMap{width:100%;height:100%;min-height:0;position:relative}
+
+/* Route viewer layer control — donker thema */
+.rv-layer-ctrl{position:absolute;top:10px;right:10px;z-index:1000}
+.rv-layer-btn{
+  width:34px;height:34px;
+  background:rgba(13,17,23,.9);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);
+  transition:all .12s;
+  backdrop-filter:blur(8px);
+}
+.rv-layer-btn:hover{border-color:rgba(0,200,150,.6);background:rgba(0,200,150,.12)}
+.rv-layer-panel{
+  display:none;
+  position:absolute;top:40px;right:0;
+  background:rgba(13,17,23,.97);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  padding:10px 12px;
+  min-width:200px;
+  flex-direction:column;
+  gap:2px;
+  backdrop-filter:blur(16px);
+}
+.rv-layer-panel.open{display:flex}
+.rv-layer-section{
+  font-size:9px;font-weight:700;color:rgba(0,200,150,.7);
+  text-transform:uppercase;letter-spacing:1px;
+  padding:6px 0 4px;border-bottom:1px solid rgba(255,255,255,.08);
+  margin-bottom:4px;
+}
+.rv-layer-section:first-child{padding-top:0}
+.rv-layer-opt{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 4px;border-radius:6px;cursor:pointer;
+  font-size:12px;color:rgba(255,255,255,.75);
+  transition:background .1s;user-select:none;
+  font-family:'DM Sans',sans-serif;
+}
+.rv-layer-opt:hover{background:rgba(255,255,255,.07);color:#fff}
+.rv-layer-opt input{accent-color:#00c896;cursor:pointer;flex-shrink:0}
+.rv-layer-opt .opt-icon{font-size:14px;flex-shrink:0}
 .rv-elevation{background:#050505;border-top:2px solid #00c896;position:relative;display:flex;flex-direction:column}
 .rv-ep-head{display:flex;align-items:center;gap:10px;padding:6px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
 .rv-ep-title{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#00c896}
@@ -276,7 +324,22 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .diff-picker-block.a5{background:var(--diff5);border-color:var(--diff5)}
 .diff-lbl{font-size:12px;color:var(--stone);margin-left:8px;min-width:80px}
 
-/* FOTO EDITOR */
+/* STERRENBEOORDELING */
+.star-picker{display:flex;gap:4px;align-items:center;padding:4px 0}
+.star-picker .star{
+  font-size:28px;cursor:pointer;line-height:1;
+  color:#e0d8cc;
+  transition:color .1s, transform .1s;
+  user-select:none;
+}
+.star-picker .star:hover,
+.star-picker .star.hover{color:#f0a500;transform:scale(1.15)}
+.star-picker .star.on{color:#f0a500}
+.star-picker-label{font-size:12px;color:var(--stone);margin-left:8px;min-width:80px}
+/* Kleine sterren op kaart */
+.stars-sm{display:inline-flex;gap:1px;align-items:center;line-height:1}
+.stars-sm .s{font-size:12px;color:#e0d8cc}
+.stars-sm .s.on{color:#f0a500}
 .hf-zone{border:2px dashed var(--mist);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:all .15s;background:#fafcfb;position:relative;overflow:hidden}
 .hf-zone:hover,.hf-zone.dragover{border-color:var(--leaf);background:#f0f8f3}
 .hf-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -304,7 +367,48 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .pt-wrap{position:relative;width:68px;height:68px;border-radius:6px;overflow:hidden;border:2px solid var(--mist)}
 .pt-wrap img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
 .pt-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#modalMap{height:190px;border-radius:8px;border:1.5px solid var(--mist);margin-top:4px}
+#modalMap{height:190px;border-radius:8px;border:1.5px solid var(--mist);margin-top:4px;position:relative}
+
+/* Kaartlagen control */
+.map-layer-ctrl{
+  position:absolute;top:8px;right:8px;z-index:1000;
+}
+.map-layer-btn{
+  width:32px;height:32px;
+  background:#fff;
+  border:1.5px solid var(--mist);
+  border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+  transition:all .12s;
+  user-select:none;
+}
+.map-layer-btn:hover{border-color:var(--leaf);background:#f4faf6}
+.map-layer-panel{
+  display:none;
+  position:absolute;top:38px;right:0;
+  background:#fff;
+  border:1.5px solid var(--mist);
+  border-radius:10px;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);
+  padding:10px 12px;
+  min-width:190px;
+  flex-direction:column;
+  gap:2px;
+}
+.map-layer-panel.open{display:flex}
+.map-layer-section{font-size:10px;font-weight:600;color:var(--stone);text-transform:uppercase;letter-spacing:.8px;padding:6px 0 4px;border-bottom:1px solid var(--mist);margin-bottom:4px}
+.map-layer-section:first-child{padding-top:0}
+.map-layer-opt{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 4px;border-radius:6px;cursor:pointer;
+  font-size:12px;color:var(--moss);
+  transition:background .1s;user-select:none;
+}
+.map-layer-opt:hover{background:#f4faf6}
+.map-layer-opt input{accent-color:var(--leaf);cursor:pointer;flex-shrink:0}
+.map-layer-opt .opt-icon{font-size:14px;flex-shrink:0}
 
 /* ── MULTI-SEGMENT GPX MODAL ── */
 .seg-modal-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.65);z-index:250;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
@@ -324,6 +428,109 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .seg-adres .laden{color:var(--sage);font-style:italic}
 .seg-foot{padding:14px 22px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .seg-info-txt{font-size:12px;color:var(--stone)}
+
+/* ══════════════════════════════════════
+   WANDELFICHE — digitaal + print
+══════════════════════════════════════ */
+.fiche-bg{display:none;position:fixed;inset:0;background:rgba(8,22,14,.7);z-index:700;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.fiche-bg.open{display:flex}
+.fiche-modal{background:#fff;border-radius:16px;width:100%;max-width:820px;box-shadow:0 24px 80px rgba(0,0,0,.4);overflow:hidden;animation:slideUp .22s ease;flex-shrink:0}
+.fiche-toolbar{background:var(--moss);padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fiche-toolbar h3{font-family:'Fraunces',serif;font-size:16px;color:#fff;flex:1;font-weight:600}
+.fiche-tbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#fff;cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:6px}
+.fiche-tbtn:hover{background:rgba(255,255,255,.22)}
+.fiche-tbtn.actief{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.6);font-weight:700}
+.fiche-tbtn.print{background:var(--leaf);border-color:var(--leaf)}
+.fiche-tbtn.print:hover{background:var(--sage)}
+.fiche-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:22px;cursor:pointer;padding:0 4px;transition:color .12s}
+.fiche-close:hover{color:#fff}
+.fiche-page{padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.fiche-header{display:flex;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:3px solid var(--fern)}
+.fiche-logo{width:48px;height:48px;background:var(--fern);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.fiche-vzw{font-size:10px;font-weight:600;color:var(--stone);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+.fiche-titel{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:var(--moss);line-height:1.2;margin-bottom:6px}
+.fiche-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fiche-badge{font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px}
+.fb-dag{background:#e8f5e9;color:#2e7d32}
+.fb-meer{background:#fff8e1;color:#f57f17}
+.fiche-sterren-wrap{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.fiche-sterren-wrap .fs-label{font-size:10px;color:var(--stone)}
+.fiche-sterren-wrap .fs-stars .s{font-size:18px;color:#e0d8cc}
+.fiche-sterren-wrap .fs-stars .s.on{color:#f0a500}
+.fiche-blok{display:flex;flex-direction:column;gap:10px}
+.fiche-blok-titel{font-size:10px;font-weight:700;color:var(--fern);text-transform:uppercase;letter-spacing:1.2px;padding-bottom:6px;border-bottom:1.5px solid var(--mist);display:flex;align-items:center;gap:6px}
+.fiche-stats-row{display:flex;gap:0;border:1.5px solid var(--mist);border-radius:10px;overflow:hidden}
+.fiche-stat{flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--mist)}
+.fiche-stat:last-child{border-right:none}
+.fiche-stat .fs-num{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--fern);line-height:1}
+.fiche-stat .fs-unit{font-size:10px;color:var(--stone);margin-top:2px}
+.fiche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.fiche-item{display:flex;flex-direction:column;gap:2px}
+.fi-label{font-size:10px;color:var(--stone);font-weight:500;text-transform:uppercase;letter-spacing:.6px}
+.fi-value{font-size:13px;color:var(--moss);font-weight:500;line-height:1.4}
+.fi-value.accent{color:var(--fern);font-weight:600}
+.fiche-icons-grid{display:flex;flex-wrap:wrap;gap:6px}
+.fiche-icon-item{display:flex;align-items:center;gap:5px;border:1.5px solid var(--mist);border-radius:8px;padding:5px 9px;font-size:11px}
+.fiche-icon-item.on{background:#f0f8f3;border-color:var(--leaf);color:var(--fern);font-weight:500}
+.fiche-icon-item.off{opacity:.35;color:var(--stone)}
+.fi-icon{font-size:14px;flex-shrink:0}
+.fiche-nav-pills{display:flex;flex-wrap:wrap;gap:6px}
+.fiche-nav-pill{display:flex;align-items:center;gap:5px;background:#f4faf6;border:1.5px solid var(--mist);border-radius:16px;padding:4px 10px;font-size:11px;color:var(--fern);font-weight:500}
+.fiche-beschrijving{font-size:13px;color:var(--stone);line-height:1.7;background:#f8faf9;border-radius:8px;padding:14px 16px;border-left:3px solid var(--leaf)}
+.fiche-kaart-wrap{border-radius:10px;overflow:hidden;border:1.5px solid var(--mist);height:300px;position:relative}
+#ficheMap{width:100%;height:100%}
+/* Print versies van kaart en profiel — canvas gebaseerd, geen externe tiles */
+#fichePrintKaart{display:none;border-radius:10px;overflow:hidden;border:1.5px solid var(--mist);width:100%}
+#fichePrintKaart canvas{width:100%!important;height:auto!important;display:block}
+#fichePrintProfiel{display:none;border-radius:10px;overflow:hidden;border:1.5px solid #222;width:100%}
+#fichePrintProfiel canvas{width:100%!important;height:auto!important;display:block}
+.fiche-legenda{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.fkl-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--stone)}
+.fkl-dot{width:14px;height:8px;border-radius:2px;flex-shrink:0}
+.fiche-profiel-wrap{border-radius:10px;overflow:hidden;border:1.5px solid #222;background:#050505;height:200px}
+#ficheCanvas{width:100%;height:100%;display:block}
+/* Foto slider */
+.fiche-slider-wrap{position:relative;border-radius:10px;overflow:hidden;background:#111;line-height:0}
+.fiche-slider{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);will-change:transform}
+.fiche-slide{min-width:100%;height:300px;flex-shrink:0;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
+.fiche-slide img{width:100%;height:100%;object-fit:cover;display:block}
+.fiche-slide-ph{width:100%;height:300px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--mist),#dde8e0);font-size:48px;color:var(--sage)}
+.fiche-slider-nav{position:absolute;top:50%;transform:translateY(-50%);width:100%;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none}
+.fiche-snav-btn{pointer-events:auto;background:rgba(0,0,0,.5);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:background .12s}
+.fiche-snav-btn:hover{background:rgba(0,0,0,.75)}
+.fiche-sdots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px}
+.fiche-sdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:all .15s}
+.fiche-sdot.active{background:#fff;width:20px;border-radius:4px}
+.fiche-foto-cnt{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 9px;border-radius:12px;backdrop-filter:blur(4px)}
+/* Print fotos — één per rij, vaste hoogte, object-fit:cover */
+#fichePrintFotos{display:none}
+#fichePrintFotos img{width:100%;height:180px;object-fit:cover;display:block;border-radius:6px;margin-bottom:6px;break-inside:avoid}
+.fiche-footer{text-align:center;font-size:10px;color:var(--stone);padding-top:14px;border-top:1px solid var(--mist);line-height:1.6}
+@media print{
+  /* Verberg alles */
+  body>*{display:none!important}
+  /* Toon enkel de fiche */
+  #fichePrintRoot{display:flex!important;position:static!important;background:none!important;padding:0!important;overflow:visible!important;z-index:auto!important;align-items:flex-start!important;justify-content:center!important}
+  .fiche-modal{border-radius:0!important;box-shadow:none!important;max-width:100%!important;width:100%!important;display:block!important}
+  .fiche-toolbar{display:none!important}
+  /* Slider en Leaflet kaart verbergen — print versies tonen */
+  .fiche-slider-wrap{display:none!important}
+  .fiche-kaart-wrap{display:none!important}
+  .fiche-profiel-wrap{display:none!important}
+  /* Verberg screen-foto, toon print-versies */
+  #fichHoofdFotoImg{display:none!important}
+  #fichePrintKaart{display:block!important;width:100%!important;margin-bottom:8px}
+  #fichePrintKaart img{display:block!important;width:100%!important;height:auto!important;border-radius:6px}
+  #fichePrintProfiel{display:block!important;width:100%!important}
+  #fichePrintProfiel canvas{display:block!important;width:100%!important;height:auto!important}
+  #fichePrintFotos{display:block!important;width:100%!important}
+  #fichePrintFotos img{display:block!important;width:100%!important;aspect-ratio:16/9!important;object-fit:cover!important;border-radius:6px;break-inside:avoid}
+  /* Layout */
+  .fiche-page{padding:6px 10px!important;gap:12px!important;display:flex!important;flex-direction:column!important}
+  .fiche-blok{break-inside:avoid;page-break-inside:avoid;display:flex!important;flex-direction:column!important}
+  .fiche-header{break-inside:avoid}
+  @page{margin:8mm;size:A4 portrait}
+}
 
 /* CONFIRM */
 /* VERREKIJKER OVERZICHT MODAL */
@@ -504,7 +711,32 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
         </div>
         <div class="field form-full">
           <div class="field-label">Startpunt preview</div>
-          <div id="modalMap"></div>
+          <div style="position:relative">
+            <div id="modalMap"></div>
+            <div class="map-layer-ctrl" id="mapLayerCtrl">
+              <div class="map-layer-btn" id="mapLayerBtn" onclick="toggleLayerPanel()" title="Kaartlagen">🗺️</div>
+              <div class="map-layer-panel" id="mapLayerPanel">
+                <div class="map-layer-section">Basislaag</div>
+                <label class="map-layer-opt">
+                  <input type="radio" name="modalLayer" value="osm" checked onchange="wisselLaag(this)">
+                  <span class="opt-icon">🗺️</span> OpenStreetMap
+                </label>
+                <label class="map-layer-opt">
+                  <input type="radio" name="modalLayer" value="topo" onchange="wisselLaag(this)">
+                  <span class="opt-icon">⛰️</span> OpenTopoMap
+                </label>
+                <label class="map-layer-opt">
+                  <input type="radio" name="modalLayer" value="satellite" onchange="wisselLaag(this)">
+                  <span class="opt-icon">🛰️</span> Satelliet
+                </label>
+                <div class="map-layer-section">Extra laag</div>
+                <label class="map-layer-opt">
+                  <input type="checkbox" id="waymarkedToggle" onchange="toggleWaymarked(this)">
+                  <span class="opt-icon">🥾</span> Waymarked Trails
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="field">
           <div class="field-label">Naam etappe</div>
@@ -856,6 +1088,20 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
     <!-- TAB 6 -->
     <div class="tab-pane" id="tab6">
       <div class="form-grid">
+        <div class="form-section">Beoordeling</div>
+        <div class="field form-full">
+          <div class="field-label">Jouw beoordeling van deze etappe</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:6px 0">
+            <div class="star-picker" id="starPicker">
+              <span class="star" data-val="1" onclick="setSterren(1)" onmouseenter="hoverSterren(1)" onmouseleave="unhoverSterren()">★</span>
+              <span class="star" data-val="2" onclick="setSterren(2)" onmouseenter="hoverSterren(2)" onmouseleave="unhoverSterren()">★</span>
+              <span class="star" data-val="3" onclick="setSterren(3)" onmouseenter="hoverSterren(3)" onmouseleave="unhoverSterren()">★</span>
+              <span class="star" data-val="4" onclick="setSterren(4)" onmouseenter="hoverSterren(4)" onmouseleave="unhoverSterren()">★</span>
+              <span class="star" data-val="5" onclick="setSterren(5)" onmouseenter="hoverSterren(5)" onmouseleave="unhoverSterren()">★</span>
+            </div>
+            <span class="star-picker-label" id="sterrenLabel">Geen beoordeling</span>
+          </div>
+        </div>
         <div class="form-section">Status</div>
         <div class="field form-full">
           <div class="bool-grid">
@@ -932,7 +1178,31 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
     <button class="rv-close" onclick="sluitRouteViewer()">✕ Sluiten</button>
   </div>
   <div class="rv-body">
-    <div id="rvMap"></div>
+    <div id="rvMap">
+      <div class="rv-layer-ctrl" id="rvLayerCtrl">
+        <div class="rv-layer-btn" onclick="toggleRvLayerPanel()" title="Kaartlagen">🗺️</div>
+        <div class="rv-layer-panel" id="rvLayerPanel">
+          <div class="rv-layer-section">Basislaag</div>
+          <label class="rv-layer-opt">
+            <input type="radio" name="rvLayer" value="osm" checked onchange="wisselRvLaag(this)">
+            <span class="opt-icon">🗺️</span> OpenStreetMap
+          </label>
+          <label class="rv-layer-opt">
+            <input type="radio" name="rvLayer" value="topo" onchange="wisselRvLaag(this)">
+            <span class="opt-icon">⛰️</span> OpenTopoMap
+          </label>
+          <label class="rv-layer-opt">
+            <input type="radio" name="rvLayer" value="satellite" onchange="wisselRvLaag(this)">
+            <span class="opt-icon">🛰️</span> Satelliet
+          </label>
+          <div class="rv-layer-section">Extra laag</div>
+          <label class="rv-layer-opt">
+            <input type="checkbox" id="rvWaymarkedToggle" onchange="toggleRvWaymarked(this)">
+            <span class="opt-icon">🥾</span> Waymarked Trails
+          </label>
+        </div>
+      </div>
+    </div>
     <div class="rv-elevation">
       <div class="rv-ep-head">
         <span class="rv-ep-title">Hoogteprofiel</span>
@@ -956,6 +1226,21 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
   <div class="rvt-dist" id="rvtDist"></div>
   <div class="rvt-elev" id="rvtElev"></div>
   <div class="rvt-grade" id="rvtGrade"></div>
+</div>
+
+<!-- ══ WANDELFICHE MODAL ══ -->
+<div class="fiche-bg" id="ficheBg" id="fichePrintRoot">
+  <div class="fiche-modal">
+    <div class="fiche-toolbar">
+      <h3 id="ficheToolbarTitel">Wandelfiche</h3>
+      <button class="fiche-tbtn" data-prof="sport"    onclick="ficheProfiel('sport')"    >Sportief</button>
+      <button class="fiche-tbtn" data-prof="recreant" onclick="ficheProfiel('recreant')" >Recreant</button>
+      <button class="fiche-tbtn" data-prof="hart"     onclick="ficheProfiel('hart')"     >Hartpatiënt</button>
+      <button class="fiche-tbtn print" onclick="printFiche()">🖨️ Afdrukken</button>
+      <button class="fiche-close" onclick="sluitFiche()">×</button>
+    </div>
+    <div class="fiche-page" id="fichePage"></div>
+  </div>
 </div>
 
 <div class="confirm-bg" id="confirmBg">
@@ -1383,11 +1668,118 @@ function setDiff(val){
   const l=document.getElementById('diffLbl');l.textContent=DIFF_NAMEN[val]||'Niet ingesteld';l.style.color=val>0?DIFF_KLEUR[val]:'var(--stone)';
 }
 
-// ════════ MAP ════════
+// ════════ STERRENBEOORDELING ════════
+let sterrenWaarde = 0;
+const STERREN_LABELS = ['Geen beoordeling','Zwak','Matig','Goed','Zeer goed','Uitstekend'];
+
+function setSterren(val){
+  sterrenWaarde = sterrenWaarde === val ? 0 : val; // klik op zelfde = wissen
+  updateSterrenUI(sterrenWaarde);
+  etappeDirty(6);
+}
+
+function hoverSterren(val){
+  document.querySelectorAll('#starPicker .star').forEach((s,i)=>{
+    s.classList.toggle('hover', i < val);
+  });
+}
+
+function unhoverSterren(){
+  document.querySelectorAll('#starPicker .star').forEach(s=>s.classList.remove('hover'));
+}
+
+function updateSterrenUI(val){
+  sterrenWaarde = val;
+  document.querySelectorAll('#starPicker .star').forEach((s,i)=>{
+    s.classList.toggle('on', i < val);
+  });
+  const lbl = document.getElementById('sterrenLabel');
+  lbl.textContent = STERREN_LABELS[val] || 'Geen beoordeling';
+  lbl.style.color = val > 0 ? '#f0a500' : 'var(--stone)';
+}
+
+function sterrenHTML(val, groot=false){
+  if(!val) return '';
+  const sz = groot ? '16px' : '12px';
+  const sterren = [1,2,3,4,5].map(i=>
+    `<span class="s${i<=val?' on':''}" style="font-size:${sz}">★</span>`
+  ).join('');
+  return `<span class="stars-sm" aria-label="${val} van 5 sterren">${sterren}</span>`;
+}
+let modalBaseLayers = {};
+let modalWaymarkedLayer = null;
+let modalActiveBase = 'osm';
+
 function initMap(){
-  if(modalMap)return;
-  modalMap=L.map('modalMap').setView([51,4],7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(modalMap);
+  if(modalMap) return;
+
+  // Leaflet icon fix voor GitHub Pages / file://
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  });
+
+  modalMap = L.map('modalMap',{zoomControl:true}).setView([51,4],7);
+
+  // Basislagen definiëren
+  modalBaseLayers.osm = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap',maxZoom:19}
+  );
+  modalBaseLayers.topo = L.tileLayer(
+    'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenTopoMap',maxZoom:17}
+  );
+  modalBaseLayers.satellite = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {attribution:'© Esri World Imagery',maxZoom:19}
+  );
+
+  // Waymarked Trails overlay
+  modalWaymarkedLayer = L.tileLayer(
+    'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+    {attribution:'© Waymarked Trails',opacity:0.7,maxZoom:19}
+  );
+
+  // Start met OSM
+  modalBaseLayers.osm.addTo(modalMap);
+
+  // Sluit layer panel bij klik buiten
+  document.addEventListener('click', e => {
+    const ctrl = document.getElementById('mapLayerCtrl');
+    if(ctrl && !ctrl.contains(e.target)){
+      document.getElementById('mapLayerPanel').classList.remove('open');
+    }
+  });
+}
+
+function toggleLayerPanel(){
+  document.getElementById('mapLayerPanel').classList.toggle('open');
+}
+
+function wisselLaag(radio){
+  if(!modalMap) return;
+  // Verwijder huidige basislaag
+  Object.values(modalBaseLayers).forEach(l=>{ if(modalMap.hasLayer(l)) modalMap.removeLayer(l); });
+  // Voeg nieuwe toe
+  modalActiveBase = radio.value;
+  modalBaseLayers[modalActiveBase].addTo(modalMap);
+  // Waymarked bovenop houden
+  if(modalMap.hasLayer(modalWaymarkedLayer)){
+    modalWaymarkedLayer.remove();
+    modalWaymarkedLayer.addTo(modalMap);
+  }
+}
+
+function toggleWaymarked(checkbox){
+  if(!modalMap) return;
+  if(checkbox.checked){
+    modalWaymarkedLayer.addTo(modalMap);
+  } else {
+    modalMap.removeLayer(modalWaymarkedLayer);
+  }
 }
 
 // ════════ WANDELINGEN LIJST ════════
@@ -1489,7 +1881,7 @@ async function toonWandelingInhoud(id){
         <div class="card-stats"><span>📏 <strong>${e.afstand||'—'}</strong> km</span>${e.hoogteverschil&&e.hoogteverschil!=='—'?`<span>⛰️ <strong>${e.hoogteverschil}</strong> m</span>`:''} ${e.geschatdeTijd&&e.geschatdeTijd!=='—'?`<span>⏱️ <strong>${e.geschatdeTijd}</strong></span>`:''}</div>
         ${e.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 ${e.startAdres}</div>`:''}
         ${e.eindAdres&&e.eindAdres!==e.startAdres?`<div style="font-size:10px;color:var(--stone)">🏁 ${e.eindAdres}</div>`:''}
-        <div class="card-tags"><div class="diff-blocks" data-level="${e.moeilijkheid||0}"><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div></div>${e.alpineSchaal?`<span class="alpine-pill">${e.alpineSchaal}</span>`:''} ${tags.join('')}</div>
+        <div class="card-tags"><div class="diff-blocks" data-level="${e.moeilijkheid||0}"><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div><div class="diff-block"></div></div>${e.alpineSchaal?`<span class="alpine-pill">${e.alpineSchaal}</span>`:''} ${e.beoordeling?sterrenHTML(e.beoordeling):''} ${tags.join('')}</div>
         ${e.beschrijving?`<div class="card-desc">${e.beschrijving.substring(0,90)}${e.beschrijving.length>90?'…':''}</div>`:''}
         <div class="card-footer">
           <button class="card-btn fiche" onclick="toonFiche(${e.etappeID})">📄 Fiche</button>
@@ -1644,6 +2036,11 @@ function resetEtappeModal(){
   ['gpxInput','hoofdfotoInput','fotoInput'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   document.getElementById('gpxStats').style.display='none';
   document.getElementById('gpxError').style.display='none';
+  // Reset kaartlagen naar OSM
+  const osmRadio = document.querySelector('input[name="modalLayer"][value="osm"]');
+  if(osmRadio){ osmRadio.checked=true; if(modalMap) wisselLaag(osmRadio); }
+  const waymarked = document.getElementById('waymarkedToggle');
+  if(waymarked && waymarked.checked){ waymarked.checked=false; if(modalMap&&modalWaymarkedLayer) modalMap.removeLayer(modalWaymarkedLayer); }
   document.getElementById('fotoEditorWrap').classList.remove('visible');
   document.getElementById('hfZone').style.display='block';
   document.getElementById('cropPreviewWrap').style.display='none';
@@ -1651,7 +2048,7 @@ function resetEtappeModal(){
   document.querySelector('.foto-editor-head').style.display='flex';
   document.getElementById('photoStrip').innerHTML='';
   ['inpRolstoel','inpRollator','inpKinderwagen','inpHond','inpVisueel','inpIndividueel','inpKleineGroep','inpGroteGroep','inpParking','inpOV','inpBus','inpStation','inpPrikkelarm','inpCognitief','inpGedrag','inpRustMomenten','inpVroegtijdig','inpRustbanken','inpSchaduw','inpToilet','inpDrinkwater','inpOverdekt','inpHoreca','inpNooduitgang','inpAED','inpUitgelicht'].forEach(id=>setBool(id,false));
-  setBool('inpAktief',true);resetPills();setDiff(0);toonTab(0);
+  setBool('inpAktief',true);resetPills();setDiff(0);updateSterrenUI(0);toonTab(0);
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('dirty'));
   setEtappeKnopStaat('idle');
 }
@@ -1692,7 +2089,7 @@ async function openBewerkEtappe(id){
   if(e.afstand){document.getElementById('statAfstand').textContent=e.afstand;document.getElementById('statPunten').textContent=e.gpxPunten||'—';document.getElementById('statHoogte').textContent=e.hoogteverschil||'—';document.getElementById('statStijging').textContent=e.stijgingsPct||'—';document.getElementById('statTijd').textContent=e.geschatdeTijd||'—';document.getElementById('gpxStats').style.display='flex'}
   const bmap={inpRolstoel:'rolstoel',inpRollator:'rollator',inpKinderwagen:'kinderwagen',inpHond:'hond',inpVisueel:'geschiktVisueel',inpIndividueel:'geschiktIndividueel',inpKleineGroep:'geschiktKleineGroep',inpGroteGroep:'geschiktGroteGroep',inpParking:'parkingAanwezig',inpOV:'ovVriendelijk',inpBus:'busToegankelijk',inpStation:'stationsstapper',inpPrikkelarm:'prikkelarm',inpCognitief:'geschiktCognitief',inpGedrag:'geschiktGedrag',inpRustMomenten:'rustMomentenVoorzien',inpVroegtijdig:'vroegtijdigStoppen',inpRustbanken:'rustbankenAanwezig',inpSchaduw:'schaduwAanwezig',inpToilet:'toiletOnderweg',inpDrinkwater:'drinkwaterAanwezig',inpOverdekt:'overdekteRustplaats',inpHoreca:'horecaOnderweg',inpNooduitgang:'nooduitgangMogelijk',inpAED:'aedInBuurt',inpAktief:'aktief',inpUitgelicht:'uitgelicht'};
   Object.entries(bmap).forEach(([elId,veld])=>setBool(elId,e[veld]));
-  setPills('routetype',e.routeType?[e.routeType]:[]);setPills('navigatie',e.navigatiemethode||[]);setPills('seizoen',e.besteSeizoen||[]);setPills('omgeving',e.omgevingstype||[]);setDiff(moeilijkheid);
+  setPills('routetype',e.routeType?[e.routeType]:[]);setPills('navigatie',e.navigatiemethode||[]);setPills('seizoen',e.besteSeizoen||[]);setPills('omgeving',e.omgevingstype||[]);setDiff(moeilijkheid);updateSterrenUI(e.beoordeling||0);
   if(e.hoofdFoto){const src=blobUrl(e.hoofdFoto,e.hoofdFotoType||'image/jpeg');document.getElementById('hfZone').style.display='none';document.getElementById('fotoEditorWrap').classList.add('visible');document.getElementById('cropPreviewWrap').style.display='block';document.getElementById('canvasOuter').style.display='none';document.querySelector('.foto-editor-head').style.display='none';document.getElementById('cropPreview').src=src}
   hertekenExtraStrip();
   // Bij bewerken: knop actief want gegevens zijn ingevuld, maar nog geen dirty
@@ -2139,7 +2536,7 @@ async function saveEtappe(){
     overdekteRustplaats:document.getElementById('inpOverdekt').checked?1:0,horecaOnderweg:document.getElementById('inpHoreca').checked?1:0,
     nooduitgangMogelijk:document.getElementById('inpNooduitgang').checked?1:0,aedInBuurt:document.getElementById('inpAED').checked?1:0,gsmBereik:document.getElementById('inpGSM').value,
     hoofdFoto:hoofdFotoBlob,hoofdFotoType:'image/jpeg',extraFotos,gpxBlob:huidigeGpxBlob,
-    aktief:document.getElementById('inpAktief').checked?1:0,uitgelicht:document.getElementById('inpUitgelicht').checked?1:0,wijzigingsdatum:Date.now()
+    aktief:document.getElementById('inpAktief').checked?1:0,uitgelicht:document.getElementById('inpUitgelicht').checked?1:0,beoordeling:sterrenWaarde,wijzigingsdatum:Date.now()
   };
   try{
     if(bewerktEtappeID){await db.etappes.update(bewerktEtappeID,data);toon('Etappe opgeslagen ✓')}
@@ -2181,24 +2578,38 @@ async function openOverzicht(e,id){
   }
 
   for(const et of etappes){
-    // Icoontjes samenstellen
+    // Icoontjes samenstellen — alle kenmerken
     const icons=[];
-    if(et.rolstoel)      icons.push({i:'♿',t:'Rolstoel'});
-    if(et.rollator)      icons.push({i:'🦽',t:'Rollator'});
-    if(et.kinderwagen)   icons.push({i:'👶',t:'Kinderwagen'});
-    if(et.hond)          icons.push({i:'🐶',t:'Hond'});
-    if(et.stationsstapper)icons.push({i:'🚉',t:'Stationsstapper'});
-    if(et.parkingAanwezig)icons.push({i:'🅿️',t:'Parking'});
-    if(et.prikkelarm)    icons.push({i:'🤫',t:'Prikkelarm'});
+    // Toegankelijkheid
+    if(et.rolstoel)        icons.push({i:'♿',t:'Rolstoel'});
+    if(et.rollator)        icons.push({i:'🦽',t:'Rollator'});
+    if(et.kinderwagen)     icons.push({i:'👶',t:'Kinderwagen'});
+    if(et.hond)            icons.push({i:'🐶',t:'Hondvriendelijk'});
+    if(et.geschiktVisueel) icons.push({i:'👁️',t:'Visuele beperking'});
     if(et.geschiktCognitief)icons.push({i:'🧩',t:'Cognitief'});
+    if(et.geschiktGedrag)  icons.push({i:'💚',t:'Gedragsmoeilijkheden'});
+    // Vervoer
+    if(et.parkingAanwezig) icons.push({i:'🅿️',t:'Parking'});
+    if(et.ovVriendelijk)   icons.push({i:'🚌',t:'OV-vriendelijk'});
+    if(et.busToegankelijk) icons.push({i:'🚐',t:'Lage-instap bus'});
+    if(et.stationsstapper) icons.push({i:'🚉',t:'Stationsstapper'});
+    // Psychisch
+    if(et.prikkelarm)      icons.push({i:'🤫',t:'Prikkelarm'});
     if(et.rustMomentenVoorzien)icons.push({i:'⏸️',t:'Rustmomenten'});
-    if(et.vroegtijdigStoppen)icons.push({i:'🚪',t:'Vroegtijdig stoppen'});
-    if(et.toiletOnderweg)icons.push({i:'🚻',t:'Toilet'});
+    if(et.vroegtijdigStoppen)  icons.push({i:'🚪',t:'Vroegtijdig stoppen'});
+    // Comfort
+    if(et.rustbankenAanwezig)icons.push({i:'🪑',t:'Rustbanken'});
+    if(et.schaduwAanwezig) icons.push({i:'🌳',t:'Schaduw'});
+    if(et.toiletOnderweg)  icons.push({i:'🚻',t:'Toilet'});
     if(et.drinkwaterAanwezig)icons.push({i:'💧',t:'Drinkwater'});
-    if(et.schaduwAanwezig)icons.push({i:'🌳',t:'Schaduw'});
-    if(et.horecaOnderweg)icons.push({i:'☕',t:'Horeca'});
-    if(et.aedInBuurt)    icons.push({i:'❤️‍🩹',t:'AED'});
+    if(et.overdekteRustplaats)icons.push({i:'⛺',t:'Overdekte rustplaats'});
+    if(et.horecaOnderweg)  icons.push({i:'☕',t:'Horeca'});
     if(et.nooduitgangMogelijk)icons.push({i:'🚨',t:'Nooduitgang'});
+    if(et.aedInBuurt)      icons.push({i:'❤️‍🩹',t:'AED'});
+    // Groepsprofiel
+    if(et.geschiktIndividueel) icons.push({i:'🚶',t:'Individueel'});
+    if(et.geschiktKleineGroep) icons.push({i:'👥',t:'Kleine groep'});
+    if(et.geschiktGroteGroep)  icons.push({i:'👨‍👩‍👧‍👦',t:'Grote groep'});
 
     const diff=et.moeilijkheid||0;
     const diffBlokjes=`<div style="display:flex;gap:2px;align-items:center">
@@ -2212,8 +2623,27 @@ async function openOverzicht(e,id){
     if(et.hoogteverschil&&et.hoogteverschil!=='—')statItems.push(`⛰️ <strong>${et.hoogteverschil}</strong> m`);
     if(et.geschatdeTijd&&et.geschatdeTijd!=='—')statItems.push(`⏱️ <strong>${et.geschatdeTijd}</strong>`);
     if(et.alpineSchaal)statItems.push(`<span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:#f3f3f3;border:1px solid #ddd">${et.alpineSchaal}</span>`);
-    if(et.gsmBereik)statItems.push(`<span style="font-size:10px;color:${gsmKleur}">📶 GSM: ${et.gsmBereik}</span>`);
+    if(et.gsmBereik)statItems.push(`<span style="font-size:10px;color:${gsmKleur}">📶 ${et.gsmBereik}</span>`);
     if(et.routeType)statItems.push(`${et.routeType==='lus'?'🔄 Lus':'➡️ A→B'}`);
+    if(et.ondergrond)statItems.push(`<span style="font-size:10px;color:var(--stone)">${et.ondergrond}</span>`);
+
+    // Extra info rijen
+    const SEI={lente:'🌸',zomer:'☀️',herfst:'🍂',winter:'❄️'};
+    const OMG={bos:'🌲',heide:'🌾',kust:'🌊',rivier:'🏞️',berg:'⛰️',stad:'🏘️',polder:'🌿'};
+    const NAV={knooppunten:'Knooppunten','knooppunten-virtueel':'Virtueel',
+      'gr-wr':'GR wit/rood','gr-yr':'GR geel/rood',
+      pelgrimage:'🐚 Pelgrimage',lokaal:'🏛️ Lokaal',gps:'📡 GPS',kaart:'🗺️ Kaart',eigen:'✏️ Eigen'};
+
+    const seizoenStr=(et.besteSeizoen||[]).map(s=>SEI[s]||s).join('');
+    const omgStr=(et.omgevingstype||[]).map(o=>OMG[o]||o).join(' ');
+    const navStr=(et.navigatiemethode||[]).map(n=>NAV[n]||n).join(' · ');
+
+    const extraRijen=[];
+    if(et.sociaaleDruk)    extraRijen.push(`🧠 Sociale druk: <strong>${et.sociaaleDruk}</strong>`);
+    if(et.voorspelbaarheid)extraRijen.push(`🎯 Voorspelbaar: <strong>${et.voorspelbaarheid}</strong>`);
+    if(et.mentaalBelasting)extraRijen.push(`💭 Mentaal: <strong>${et.mentaalBelasting}</strong>`);
+    if(et.maxGroepsgrootte)extraRijen.push(`👥 Max: <strong>${et.maxGroepsgrootte}</strong> pers.`);
+    if(et.aanbevolenBegeleiders)extraRijen.push(`👤 Begeleiders: <strong>${et.aanbevolenBegeleiders}</strong>`);
 
     let fotoHTML=`<div class="ov-foto-ph">🌲</div>`;
     if(et.hoofdFoto){const src=blobUrl(et.hoofdFoto,et.hoofdFotoType||'image/jpeg');fotoHTML=`<img src="${src}" alt="">`;}
@@ -2225,39 +2655,743 @@ async function openOverzicht(e,id){
         ${w.type==='meerdaagse'?`<span class="ov-num">Etappe ${et.volgorde||'—'}</span>`:''}
       </div>
       <div class="ov-info">
-        <div class="ov-naam">${et.titel||'Naamloos'}</div>
+        <div class="ov-naam">${et.titel||'Naamloos'} ${et.beoordeling?sterrenHTML(et.beoordeling,true):''}</div>
         <div class="ov-stats">${statItems.join('<span style="color:#ddd">·</span>')}</div>
         ${diffBlokjes}
-        ${et.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 Start: ${et.startAdres}</div>`:''}
-        ${et.eindAdres&&et.eindAdres!==et.startAdres?`<div style="font-size:10px;color:var(--stone)">🏁 Einde: ${et.eindAdres}</div>`:''}
-        ${et.beschrijving?`<div style="font-size:11px;color:var(--stone);line-height:1.5;margin-top:3px">${et.beschrijving.substring(0,120)}${et.beschrijving.length>120?'…':''}</div>`:''}
+        ${navStr?`<div style="font-size:10px;color:var(--stone);margin-top:3px">${navStr}</div>`:''}
+        ${seizoenStr||omgStr?`<div style="font-size:10px;color:var(--stone);margin-top:2px">${seizoenStr} ${omgStr}</div>`:''}
+        ${et.startAdres?`<div style="font-size:10px;color:var(--stone);margin-top:2px">📍 ${et.startAdres}</div>`:''}
+        ${et.eindAdres&&et.eindAdres!==et.startAdres?`<div style="font-size:10px;color:var(--stone)">🏁 ${et.eindAdres}</div>`:''}
+        ${extraRijen.length?`<div style="font-size:10px;color:var(--stone);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px">${extraRijen.map(r=>`<span>${r}</span>`).join('')}</div>`:''}
+        ${et.psychNotities?`<div style="font-size:10px;color:var(--stone);font-style:italic;margin-top:2px">${et.psychNotities.substring(0,80)}${et.psychNotities.length>80?'…':''}</div>`:''}
+        ${et.beschrijving?`<div style="font-size:11px;color:var(--stone);line-height:1.5;margin-top:3px">${et.beschrijving.substring(0,100)}${et.beschrijving.length>100?'…':''}</div>`:''}
       </div>
       <div class="ov-icons">
         <div style="font-size:9px;color:var(--stone);text-transform:uppercase;letter-spacing:.8px;font-weight:500;margin-bottom:4px">Kenmerken</div>
-        <div class="ov-icon-row">${icons.map(ic=>`<span class="ov-icon" aria-hidden="true" style="pointer-events:none;user-select:none">${ic.i}</span>`).join('')||'<span style="font-size:10px;color:var(--stone)">—</span>'}</div>
+        <div class="ov-icon-row">${icons.map(ic=>`<span class="ov-icon" aria-hidden="true" style="pointer-events:none;user-select:none;font-size:15px">${ic.i}</span>`).join('')||'<span style="font-size:10px;color:var(--stone)">—</span>'}</div>
       </div>`;
     body.appendChild(row);
   }
   document.getElementById('overzichtBg').classList.add('open');
 }
 
-function toonFiche(id){toon('📄 Wandelfiche komt in fase 2!')}
-
 // ════════════════════════════════════════
-// ROUTE VIEWER — Trail Explorer integratie
+// WANDELFICHE — fase 2
 // ════════════════════════════════════════
-// Fix Leaflet default icon pad voor file:// gebruik
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+let ficheEtappeID = null;
+let ficheMap = null, ficheMapMarkers = [];
+let ficheElevData = [];
+let ficheProfActief = 'sport';
+let ficheSliderIdx = 0;
+let ficheFotos = []; // [{blob, type, isHoofd}]
 
+const FICHE_PROFILES = {
+  sport:    {low:6, high:15, labels:['0–6%','6–15%','15%+'], naam:'Sportief'},
+  recreant: {low:4, high:8,  labels:['0–4%','4–8%','8%+'],  naam:'Recreant'},
+  hart:     {low:2, high:5,  labels:['0–2%','2–5%','5%+'],  naam:'Hartpatiënt'}
+};
+
+function ficheGradeColor(grade){
+  const g=Math.abs(grade||0), p=FICHE_PROFILES[ficheProfActief];
+  return g<p.low?'#2ecc71':g<p.high?'#f1c40f':'#e74c3c';
+}
+
+async function toonFiche(etappeID){
+  ficheEtappeID = etappeID;
+  const e = await db.etappes.get(etappeID);
+  if(!e){ toon('Etappe niet gevonden'); return; }
+  const w = await db.wandelingen.get(e.wandelingID);
+
+  document.getElementById('ficheToolbarTitel').textContent = e.titel||'Wandelfiche';
+  document.getElementById('ficheBg').classList.add('open');
+  // Zet actieve profielknop
+  document.querySelectorAll('.fiche-tbtn[data-prof]').forEach(b=>{
+    b.classList.toggle('actief', b.dataset.prof===ficheProfActief);
+  });
+
+  // Enkel de hoofdfoto — uniform formaat 16:9, geen formaat-problemen
+  ficheFotos = [];
+  if(e.hoofdFoto) ficheFotos.push({blob:e.hoofdFoto, type:e.hoofdFotoType||'image/jpeg'});
+
+  // GPX verwerken voor hoogteprofiel
+  ficheElevData = [];
+  if(e.gpxBlob){
+    const text = new TextDecoder().decode(e.gpxBlob);
+    const xml  = new DOMParser().parseFromString(text,'application/xml');
+    const pts  = xml.getElementsByTagName('trkpt');
+    if(pts.length >= 2){
+      const raw=[]; let dTotal=0;
+      for(let i=0;i<pts.length;i++){
+        const lat=parseFloat(pts[i].getAttribute('lat'));
+        const lon=parseFloat(pts[i].getAttribute('lon'));
+        const ele=parseFloat(pts[i].getElementsByTagName('ele')[0]?.textContent||0)||0;
+        if(i>0) dTotal+=haversine(raw[i-1].lat,raw[i-1].lon,lat,lon);
+        raw.push({dist:dTotal,elev:ele,lat,lon});
+      }
+      const STEP=0.05; let res=[];
+      for(let d=0;d<=dTotal;d+=STEP){
+        const i2=raw.findIndex(p=>p.dist>=d);
+        if(i2<=0){const p=raw[i2===0?0:raw.length-1];res.push({dist:d,elev:p.elev,lat:p.lat,lon:p.lon});}
+        else{const p1=raw[i2-1],p2=raw[i2],r=(d-p1.dist)/(p2.dist-p1.dist||.0001);res.push({dist:d,elev:p1.elev+(p2.elev-p1.elev)*r,lat:p1.lat+(p2.lat-p1.lat)*r,lon:p1.lon+(p2.lon-p1.lon)*r});}
+      }
+      ficheElevData=res.map((p,i,arr)=>{const win=arr.slice(Math.max(0,i-2),Math.min(arr.length,i+3));return{...p,elev:win.reduce((s,c)=>s+c.elev,0)/win.length,grade:0};});
+      for(let i=1;i<ficheElevData.length;i++){
+        const de=ficheElevData[i].elev-ficheElevData[i-1].elev;
+        const dd=(ficheElevData[i].dist-ficheElevData[i-1].dist)*1000;
+        ficheElevData[i].grade=dd>0?(de/dd)*100:0;
+      }
+    }
+  }
+
+  renderFiche(e, w);
+}
+
+function renderFiche(e, w){
+  const p     = FICHE_PROFILES[ficheProfActief];
+  const DIFFS = ['','Makkelijk','Gemiddeld','Matig','Moeilijk','Zwaar'];
+  const DIFF_K= ['','#4CAF50','#8BC34A','#FFC107','#FF5722','#B71C1C'];
+  const STERREN_LBL = ['','Zwak','Matig','Goed','Zeer goed','Uitstekend'];
+  const NAV_NAMEN = {
+    knooppunten:'Wandelknooppunten', 'knooppunten-virtueel':'Virtuele knooppunten',
+    'gr-wr':'GR wit/rood','gr-yr':'GR geel/rood',
+    pelgrimage:'Pelgrimage',lokaal:'Lokale route',
+    gps:'GPS',kaart:'Kaart',eigen:'Eigen traject'
+  };
+  const NAV_ICONS = {
+    knooppunten:'🔴','knooppunten-virtueel':'🟣','gr-wr':'🔴','gr-yr':'🟡',
+    pelgrimage:'🐚',lokaal:'🏛️',gps:'📡',kaart:'🗺️',eigen:'✏️'
+  };
+
+  // Sterren HTML
+  const sHTML = e.beoordeling
+    ? `<div class="fiche-sterren-wrap">
+        <div class="fs-label">${STERREN_LBL[e.beoordeling]||''}</div>
+        <div class="fs-stars">${[1,2,3,4,5].map(i=>`<span class="s${i<=e.beoordeling?' on':''}" aria-hidden="true">★</span>`).join('')}</div>
+       </div>` : '';
+
+  // Moeilijkheid blokjes
+  const diff = e.moeilijkheid||0;
+  const diffBlok = `<div style="display:flex;gap:3px;align-items:center">
+    ${[1,2,3,4,5].map(i=>`<div class="fiche-diff-block" style="background:${i<=diff?DIFF_K[diff]:'#e0e0e0'};border-color:${i<=diff?DIFF_K[diff]:'#ccc'}"></div>`).join('')}
+    <span style="font-size:12px;color:${diff>0?DIFF_K[diff]:'var(--stone)'};margin-left:6px;font-weight:600">${DIFFS[diff]||'—'}</span>
+    ${e.alpineSchaal?`<span class="alpine-pill" style="margin-left:6px">${e.alpineSchaal}</span>`:''}
+  </div>`;
+
+  // Navigatie pills
+  const navPills = (e.navigatiemethode||[]).map(v=>
+    `<span class="fiche-nav-pill"><span aria-hidden="true">${NAV_ICONS[v]||'📍'}</span>${NAV_NAMEN[v]||v}</span>`
+  ).join('');
+
+  // Toegankelijkheid items
+  const toegItems = [
+    {id:'rolstoel',   icon:'♿', label:'Rolstoel'},
+    {id:'rollator',   icon:'🦽', label:'Rollator'},
+    {id:'kinderwagen',icon:'👶', label:'Kinderwagen'},
+    {id:'hond',       icon:'🐶', label:'Hond'},
+    {id:'geschiktVisueel', icon:'👁️',label:'Visueel'},
+    {id:'geschiktCognitief',icon:'🧩',label:'Cognitief'},
+    {id:'geschiktGedrag',   icon:'💚',label:'Gedrag'},
+  ].map(t=>`<div class="fiche-icon-item ${e[t.id]?'on':'off'}" aria-hidden="true"><span class="fi-icon">${t.icon}</span>${t.label}</div>`).join('');
+
+  // Vervoer items
+  const vervoerItems = [
+    {id:'parkingAanwezig',icon:'🅿️',label:'Parking'},
+    {id:'ovVriendelijk', icon:'🚌',label:'OV'},
+    {id:'busToegankelijk',icon:'🚐',label:'Lage instap'},
+    {id:'stationsstapper',icon:'🚉',label:'Station'},
+  ].map(t=>`<div class="fiche-icon-item ${e[t.id]?'on':'off'}" aria-hidden="true"><span class="fi-icon">${t.icon}</span>${t.label}</div>`).join('');
+
+  // Psychisch items
+  const psyItems = [
+    {id:'prikkelarm',         icon:'🤫',label:'Prikkelarm'},
+    {id:'rustMomentenVoorzien',icon:'⏸️',label:'Rustmomenten'},
+    {id:'vroegtijdigStoppen', icon:'🚪',label:'Vroeg stoppen'},
+  ].map(t=>`<div class="fiche-icon-item ${e[t.id]?'on':'off'}" aria-hidden="true"><span class="fi-icon">${t.icon}</span>${t.label}</div>`).join('');
+
+  // Comfort items
+  const comfortItems = [
+    {id:'rustbankenAanwezig',icon:'🪑',label:`Rustbanken${e.aantalRustbanken?` (${e.aantalRustbanken})`:''}` },
+    {id:'schaduwAanwezig',   icon:'🌳',label:'Schaduw'},
+    {id:'toiletOnderweg',    icon:'🚻',label:'Toilet'},
+    {id:'drinkwaterAanwezig',icon:'💧',label:'Drinkwater'},
+    {id:'overdekteRustplaats',icon:'⛺',label:'Overdekt'},
+    {id:'horecaOnderweg',    icon:'☕',label:'Horeca'},
+    {id:'nooduitgangMogelijk',icon:'🚨',label:'Nooduitgang'},
+    {id:'aedInBuurt',        icon:'❤️‍🩹',label:'AED'},
+  ].map(t=>`<div class="fiche-icon-item ${e[t.id]?'on':'off'}" aria-hidden="true"><span class="fi-icon">${t.icon}</span>${t.label}</div>`).join('');
+
+  // Seizoen + omgeving
+  const SEI_N={lente:'🌸 Lente',zomer:'☀️ Zomer',herfst:'🍂 Herfst',winter:'❄️ Winter'};
+  const OMG_N={bos:'🌲 Bos',heide:'🌾 Heide',kust:'🌊 Kust',rivier:'🏞️ Rivier',berg:'⛰️ Berg',stad:'🏘️ Stad',polder:'🌿 Polder'};
+  const seizStr = (e.besteSeizoen||[]).map(s=>SEI_N[s]||s).join(' · ')||'—';
+  const omgStr  = (e.omgevingstype||[]).map(o=>OMG_N[o]||o).join(' · ')||'—';
+
+  // Hoofdfoto display — altijd 16:9, geen slider nodig voor één foto
+  const fotoHTML = ficheFotos.length > 0
+    ? `<div style="border-radius:10px;overflow:hidden;line-height:0;background:#111">
+         <img id="fichHoofdFotoImg" src="${blobUrl(ficheFotos[0].blob,ficheFotos[0].type)}"
+              alt="Hoofdfoto wandeling"
+              style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block">
+       </div>`
+    : `<div style="background:#f8faf9;border:2px dashed var(--mist);border-radius:10px;height:100px;display:flex;align-items:center;justify-content:center;color:var(--stone);font-size:13px;gap:8px"><span>📷</span>Geen hoofdfoto</div>`;
+
+  const html = `
+    <!-- HEADER -->
+    <div class="fiche-header">
+      <div class="fiche-logo" aria-hidden="true">🌿</div>
+      <div style="flex:1">
+        <div class="fiche-vzw">Natuurverkenners — Wandelbeheer</div>
+        <div class="fiche-titel">${e.titel||'Naamloos'}</div>
+        <div class="fiche-badges">
+          <span class="fiche-badge ${w?.type==='dag'?'fb-dag':'fb-meer'}">${w?.type==='dag'?'Dagwandeling':'Meerdaagse'}</span>
+          ${e.aktief?'<span class="fiche-badge fb-aktief">Actief</span>':''}
+          ${e.uitgelicht?'<span class="fiche-badge" style="background:#fff8e1;color:#f57f17">⭐ Uitgelicht</span>':''}
+          ${w?.naam&&w.type==='meerdaagse'?`<span class="fiche-badge" style="background:#f3e5f5;color:#6a1b9a">${w.naam}</span>`:''}
+        </div>
+      </div>
+      ${sHTML}
+    </div>
+
+    <!-- FOTO -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">📸</span> Hoofdfoto</div>
+      ${fotoHTML}
+    </div>
+
+    <!-- PRAKTISCH -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">📊</span> Praktisch</div>
+      <div class="fiche-stats-row">
+        <div class="fiche-stat"><div class="fs-num">${e.afstand||'—'}</div><div class="fs-unit">km afstand</div></div>
+        <div class="fiche-stat"><div class="fs-num">${e.hoogteverschil&&e.hoogteverschil!=='—'?e.hoogteverschil+'m':'—'}</div><div class="fs-unit">stijging</div></div>
+        <div class="fiche-stat"><div class="fs-num">${e.geschatdeTijd&&e.geschatdeTijd!=='—'?e.geschatdeTijd:'—'}</div><div class="fs-unit">geschatte tijd</div></div>
+        <div class="fiche-stat"><div class="fs-num">${e.routeType==='lus'?'🔄':'➡️'}</div><div class="fs-unit">${e.routeType==='lus'?'Lus':'A → B'}</div></div>
+      </div>
+      <div style="margin-top:4px">${diffBlok}</div>
+      ${navPills?`<div class="fiche-nav-pills" style="margin-top:4px">${navPills}</div>`:''}
+    </div>
+
+    <!-- LOCATIE -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">📍</span> Locatie</div>
+      <div class="fiche-grid">
+        <div class="fiche-item"><div class="fi-label">Startadres</div><div class="fi-value">${e.startAdres||'—'}</div></div>
+        <div class="fiche-item"><div class="fi-label">Eindadres</div><div class="fi-value">${e.eindAdres&&e.eindAdres!==e.startAdres?e.eindAdres:'— (luswandeling)'}</div></div>
+        <div class="fiche-item"><div class="fi-label">Regio</div><div class="fi-value accent">${e.regio||'—'}</div></div>
+        <div class="fiche-item"><div class="fi-label">Provincie</div><div class="fi-value">${e.provincie||'—'}</div></div>
+        <div class="fiche-item"><div class="fi-label">Omgeving</div><div class="fi-value">${omgStr}</div></div>
+        <div class="fiche-item"><div class="fi-label">Beste seizoen</div><div class="fi-value">${seizStr}</div></div>
+        <div class="fiche-item"><div class="fi-label">Ondergrond</div><div class="fi-value">${e.ondergrond||'—'}</div></div>
+        <div class="fiche-item"><div class="fi-label">Padbreedte</div><div class="fi-value">${e.padBreedte||'—'}</div></div>
+      </div>
+    </div>
+
+    <!-- KAART -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">🗺️</span> Kaart</div>
+      <div class="fiche-kaart-wrap"><div id="ficheMap"></div></div>
+      <div id="fichePrintKaart"></div>
+      <div class="fiche-legenda">
+        <div class="fkl-item"><div class="fkl-dot" style="background:#2ecc71"></div>${p.labels[0]} — vlak</div>
+        <div class="fkl-item"><div class="fkl-dot" style="background:#f1c40f"></div>${p.labels[1]} — matig</div>
+        <div class="fkl-item"><div class="fkl-dot" style="background:#e74c3c"></div>${p.labels[2]} — steil</div>
+        <div style="margin-left:auto;font-size:11px;color:var(--stone)">Profiel: <strong>${p.naam}</strong></div>
+      </div>
+    </div>
+
+    <!-- HOOGTEPROFIEL -->
+    ${ficheElevData.length?`
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">⛰️</span> Hoogteprofiel</div>
+      <div class="fiche-profiel-wrap"><canvas id="ficheCanvas"></canvas></div>
+      <div id="fichePrintProfiel"></div>
+    </div>`:''}
+
+    <!-- TOEGANKELIJKHEID -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">♿</span> Toegankelijkheid</div>
+      <div class="fiche-icons-grid">${toegItems}</div>
+      <div style="margin-top:8px">
+        <div class="fi-label" style="margin-bottom:6px">Vervoer & parking</div>
+        <div class="fiche-icons-grid">${vervoerItems}</div>
+      </div>
+      ${e.maxGroepsgrootte||e.aanbevolenBegeleiders?`
+      <div class="fiche-grid" style="margin-top:8px">
+        ${e.maxGroepsgrootte?`<div class="fiche-item"><div class="fi-label">Max. groepsgrootte</div><div class="fi-value accent">${e.maxGroepsgrootte} personen</div></div>`:''}
+        ${e.aanbevolenBegeleiders?`<div class="fiche-item"><div class="fi-label">Begeleiders</div><div class="fi-value accent">${e.aanbevolenBegeleiders}</div></div>`:''}
+      </div>`:''}
+    </div>
+
+    <!-- PSYCHISCH PROFIEL -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">🧠</span> Psychisch profiel</div>
+      <div class="fiche-icons-grid">${psyItems}</div>
+      <div class="fiche-grid" style="margin-top:8px">
+        ${e.sociaaleDruk?`<div class="fiche-item"><div class="fi-label">Sociale druk</div><div class="fi-value">${e.sociaaleDruk}</div></div>`:''}
+        ${e.voorspelbaarheid?`<div class="fiche-item"><div class="fi-label">Voorspelbaarheid</div><div class="fi-value">${e.voorspelbaarheid}</div></div>`:''}
+        ${e.mentaalBelasting?`<div class="fiche-item"><div class="fi-label">Mentale belasting</div><div class="fi-value">${e.mentaalBelasting}</div></div>`:''}
+        ${e.gsmBereik?`<div class="fiche-item"><div class="fi-label">GSM-bereik</div><div class="fi-value">${e.gsmBereik}</div></div>`:''}
+      </div>
+      ${e.psychNotities?`<div class="fiche-beschrijving" style="margin-top:8px"><strong>Notities begeleiders:</strong> ${e.psychNotities}</div>`:''}
+    </div>
+
+    <!-- COMFORT & VEILIGHEID -->
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">🌿</span> Comfort & veiligheid</div>
+      <div class="fiche-icons-grid">${comfortItems}</div>
+    </div>
+
+    <!-- BESCHRIJVING -->
+    ${e.beschrijving?`
+    <div class="fiche-blok">
+      <div class="fiche-blok-titel"><span aria-hidden="true">📝</span> Omschrijving</div>
+      <div class="fiche-beschrijving">${e.beschrijving}</div>
+    </div>`:''}
+
+    <!-- FOOTER -->
+    <div class="fiche-footer">
+      Natuurverkenners · Wandelen voor iedereen<br>
+      <span style="opacity:.6">Fiche gegenereerd op ${new Date().toLocaleDateString('nl-BE',{dateStyle:'long'})} · Etappe-ID: ${e.etappeID}</span>
+    </div>`;
+
+  document.getElementById('fichePage').innerHTML = html;
+  ficheSliderIdx = 0;
+
+  // Kaart: altijd opnieuw aanmaken want innerHTML vervangt de container
+  if(ficheMap){
+    ficheMap.remove(); // Leaflet instantie volledig vernietigen
+    ficheMap = null;
+  }
+
+  // Initialiseer kaart na DOM update
+  setTimeout(()=>{
+    const mapEl = document.getElementById('ficheMap');
+    if(!mapEl) return;
+
+    ficheMap = L.map('ficheMap',{
+      zoomControl:true,
+      attributionControl:false,
+      preferCanvas:true  // Canvas renderer — stabieler dan SVG voor print
+    });
+
+    // Basislaag
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      maxZoom:19, crossOrigin:true
+    });
+    osmLayer.addTo(ficheMap);
+
+    // Route pane
+    ficheMap.createPane('ficheRoutePane');
+    ficheMap.getPane('ficheRoutePane').style.zIndex = 450;
+
+    if(ficheElevData.length){
+      const coords = ficheElevData.map(p=>[p.lat,p.lon]);
+
+      // Gekleurde segmenten
+      let si=1;
+      while(si<ficheElevData.length){
+        const col=ficheGradeColor(ficheElevData[si].grade);
+        let ei=si;
+        while(ei+1<ficheElevData.length && ficheGradeColor(ficheElevData[ei+1].grade)===col) ei++;
+        L.polyline([coords[si-1],...coords.slice(si,ei+1)],{
+          color:col,weight:5,opacity:1,lineJoin:'round',pane:'ficheRoutePane'
+        }).addTo(ficheMap);
+        si=ei+1;
+      }
+
+      // Start/eind markers
+      L.circleMarker(coords[0],{
+        radius:8,color:'#fff',fillColor:'#00c896',fillOpacity:1,weight:2,pane:'ficheRoutePane'
+      }).addTo(ficheMap);
+      L.circleMarker(coords[coords.length-1],{
+        radius:8,color:'#fff',fillColor:'#e05252',fillOpacity:1,weight:2,pane:'ficheRoutePane'
+      }).addTo(ficheMap);
+
+      // Km labels
+      const totD=ficheElevData[ficheElevData.length-1].dist;
+      for(let km=1;km<totD-0.15;km++){
+        const pt=ficheElevData.reduce((p,c)=>Math.abs(c.dist-km)<Math.abs(p.dist-km)?c:p);
+        const icon=L.divIcon({
+          className:'',
+          html:`<div style="width:18px;height:18px;background:#fff;border:2px solid #1a3a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#1a3a2a;box-shadow:0 1px 4px rgba(0,0,0,.3);line-height:1">${km}</div>`,
+          iconSize:[18,18],iconAnchor:[9,9]
+        });
+        L.marker([pt.lat,pt.lon],{icon,zIndexOffset:-10}).addTo(ficheMap);
+      }
+
+      const bounds = L.latLngBounds(coords);
+      ficheMap.fitBounds(bounds,{padding:[20,20]});
+      ficheMap.invalidateSize();
+
+      // Genereer print-canvas zodra tiles geladen zijn (of na timeout)
+      const tekenPrintCanvas = ()=>{
+        genereerPrintKaart();
+        ficheTekeenProfiel();
+        // Print profiel ook in print canvas
+        setTimeout(()=>genereerPrintProfiel(),50);
+      };
+      // Wacht op tile load of max 3 seconden
+      let tilesKlaar = false;
+      osmLayer.on('load', ()=>{
+        if(!tilesKlaar){ tilesKlaar=true; tekenPrintCanvas(); }
+      });
+      setTimeout(()=>{ if(!tilesKlaar){ tilesKlaar=true; tekenPrintCanvas(); } }, 3000);
+    }
+  }, 200);
+}
+
+function ficheTekeenProfiel(){
+  const canvas = document.getElementById('ficheCanvas');
+  if(!canvas||!ficheElevData.length) return;
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*dpr; canvas.height=rect.height*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save(); ctx.scale(dpr,dpr);
+  const cw=canvas.width/dpr, ch=canvas.height/dpr;
+  const L=56,R=16,T=16,B=36;
+  const w=cw-L-R, h=ch-T-B;
+  if(h<=0||w<=0){ctx.restore();return;}
+  const totalD=ficheElevData[ficheElevData.length-1].dist;
+  const elevs=ficheElevData.map(p=>p.elev);
+  const minE=Math.min(...elevs),maxE=Math.max(...elevs);
+  const yMin=Math.floor(minE/10)*10-15,yMax=Math.ceil(maxE/10)*10+15;
+  ctx.fillStyle='#050505'; ctx.fillRect(0,0,cw,ch);
+  // Grid
+  for(let i=0;i<=5;i++){
+    const v=yMin+(i*(yMax-yMin)/5);
+    const y=T+h-((v-yMin)/(yMax-yMin))*h;
+    ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+w,y);ctx.stroke();
+    ctx.font='bold 10px DM Sans,sans-serif';ctx.fillStyle='rgba(0,200,150,.75)';ctx.textAlign='right';
+    ctx.fillText(Math.round(v)+'m',L-5,y+4);
+  }
+  // Fill
+  const yBase=T+h; let si=1;
+  while(si<ficheElevData.length){
+    const col=ficheGradeColor(ficheElevData[si].grade);
+    let ei=si;
+    while(ei+1<ficheElevData.length && ficheGradeColor(ficheElevData[ei+1].grade)===col) ei++;
+    ctx.beginPath();
+    const x0=L+(ficheElevData[si-1].dist/totalD)*w;
+    const y0=T+h-((ficheElevData[si-1].elev-yMin)/(yMax-yMin))*h;
+    ctx.moveTo(x0,yBase);ctx.lineTo(x0,y0);
+    for(let i=si;i<=ei;i++) ctx.lineTo(L+(ficheElevData[i].dist/totalD)*w,T+h-((ficheElevData[i].elev-yMin)/(yMax-yMin))*h);
+    ctx.lineTo(L+(ficheElevData[ei].dist/totalD)*w,yBase);
+    ctx.closePath();ctx.fillStyle=col;ctx.fill();
+    si=ei+1;
+  }
+  // X labels + ticks
+  const step=totalD>20?5:totalD>5?1:0.5;
+  for(let d=0;d<=totalD+.001;d+=.5){
+    const x=L+(d/totalD)*w;
+    const isKm=Math.abs(d-Math.round(d))<.01;
+    ctx.strokeStyle=isKm?'rgba(255,255,255,.9)':'rgba(255,255,255,.6)';
+    ctx.lineWidth=isKm?1.5:1;
+    ctx.beginPath();ctx.moveTo(x,T+h);ctx.lineTo(x,T+h+(isKm?8:4));ctx.stroke();
+  }
+  ctx.font='bold 10px DM Sans,sans-serif';ctx.fillStyle='#ffffff';ctx.textAlign='center';
+  for(let d=0;d<=totalD+.001;d+=step){
+    const x=L+(d/totalD)*w;
+    ctx.fillText(d.toFixed(d<1?1:0)+'km',x,T+h+B-2);
+  }
+  ctx.restore();
+}
+
+// Profiel wisselen
+async function ficheProfiel(prof){
+  ficheProfActief=prof;
+  document.querySelectorAll('.fiche-tbtn[data-prof]').forEach(b=>{
+    b.classList.toggle('actief', b.dataset.prof===prof);
+  });
+  // Herteken kaart
+  if(ficheMap&&ficheElevData.length){
+    ficheMap.eachLayer(l=>{if(l instanceof L.Polyline) ficheMap.removeLayer(l);});
+    const coords=ficheElevData.map(p=>[p.lat,p.lon]);
+    let si=1;
+    while(si<ficheElevData.length){
+      const col=ficheGradeColor(ficheElevData[si].grade);
+      let ei=si;
+      while(ei+1<ficheElevData.length && ficheGradeColor(ficheElevData[ei+1].grade)===col) ei++;
+      L.polyline([coords[si-1],...coords.slice(si,ei+1)],{color:col,weight:4,opacity:.95,pane:'ficheRoutePane'}).addTo(ficheMap);
+      si=ei+1;
+    }
+    // Update legenda label
+    const p=FICHE_PROFILES[ficheProfActief];
+    const items=document.querySelectorAll('.fkl-item');
+    if(items[0]) items[0].lastChild.textContent=`${p.labels[0]} — vlak`;
+    if(items[1]) items[1].lastChild.textContent=`${p.labels[1]} — matig`;
+    if(items[2]) items[2].lastChild.textContent=`${p.labels[2]} — steil`;
+    const profLabel=document.querySelector('.fiche-legenda [style*="margin-left:auto"] strong');
+    if(profLabel) profLabel.textContent=p.naam;
+  }
+  ficheTekeenProfiel();
+}
+
+// Slider navigatie
+function ficheSlide(dir){
+  ficheSliderIdx = Math.max(0, Math.min(ficheFotos.length-1, ficheSliderIdx+dir));
+  ficheGaNaar(ficheSliderIdx);
+}
+function ficheGaNaar(idx){
+  ficheSliderIdx=idx;
+  const slider=document.getElementById('ficheSlider');
+  if(slider) slider.style.transform=`translateX(-${idx*100}%)`;
+  document.querySelectorAll('.fiche-sdot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+}
+
+function sluitFiche(){
+  document.getElementById('ficheBg').classList.remove('open');
+}
+
+function printFiche(){
+  // Genereer eerst alle print-elementen asynchroon
+  const btn=document.querySelector('.fiche-tbtn.print');
+  if(btn){ btn.textContent='⏳ Laden…'; btn.disabled=true; }
+
+  Promise.all([
+    genereerPrintKaart(),
+    genereerPrintProfiel(),
+    genereerPrintFotos()
+  ]).finally(()=>{
+    if(btn){ btn.textContent='🖨️ Afdrukken'; btn.disabled=false; }
+    document.getElementById('ficheBg').id='fichePrintRoot';
+    window.print();
+    document.getElementById('fichePrintRoot').id='ficheBg';
+  });
+}
+
+// ════════ MAPBOX STATIC API VOOR PRINT ════════
+const MAPBOX_TOKEN = 'pk.eyJ1IjoicGF0aC1leHBsb3JlciIsImEiOiJjbHhnZDI1czUwem80MmtyMjFvcm5leGlhIn0.9KQPC0PuDuvirPd44lkCAw';
+
+// Encoded polyline helpers (Google format — zelfde als Trail Explorer)
+function encPoly(pts){
+  let out='', pLat=0, pLng=0;
+  function enc(v){
+    v=v<0?~(v<<1):v<<1;
+    let s='';
+    while(v>=0x20){s+=String.fromCharCode((0x20|(v&0x1f))+63);v>>=5;}
+    return s+String.fromCharCode(v+63);
+  }
+  pts.forEach(p=>{
+    const lt=Math.round(p.lat*1e5), ln=Math.round(p.lon*1e5);
+    out+=enc(lt-pLat)+enc(ln-pLng);
+    pLat=lt; pLng=ln;
+  });
+  return out;
+}
+
+function simplify(pts, max){
+  if(pts.length<=max) return pts;
+  const step=Math.ceil(pts.length/max), out=[];
+  for(let i=0;i<pts.length;i+=step) out.push(pts[i]);
+  if(out[out.length-1]!==pts[pts.length-1]) out.push(pts[pts.length-1]);
+  return out;
+}
+
+async function genereerPrintKaart(){
+  const wrap = document.getElementById('fichePrintKaart');
+  if(!wrap || !ficheElevData.length){ if(wrap) wrap.innerHTML=''; return; }
+
+  wrap.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:220px;color:var(--stone);font-size:13px;gap:8px"><span style="font-size:20px">⏳</span>Kaart laden…</div>';
+
+  const W=1280, H=760;
+  const colorHex={'#2ecc71':'2ecc71','#f1c40f':'f1c40f','#e74c3c':'e74c3c'};
+
+  // Bounding box
+  const lats=ficheElevData.map(p=>p.lat), lons=ficheElevData.map(p=>p.lon);
+  const sw={lat:Math.min(...lats),lng:Math.min(...lons)};
+  const ne={lat:Math.max(...lats),lng:Math.max(...lons)};
+  const ls=Math.max(ne.lng-sw.lng,0.001), as=Math.max(ne.lat-sw.lat,0.001), m=0.12;
+  const bbox=`[${(sw.lng-ls*m).toFixed(6)},${(sw.lat-as*m).toFixed(6)},${(ne.lng+ls*m).toFixed(6)},${(ne.lat+as*m).toFixed(6)}]`;
+
+  // Bouw overlays — zelfde aanpak als Trail Explorer downloadMapA4
+  const overlays=[];
+
+  // Witte halo achtergrond trace
+  const allEnc=encodeURIComponent(encPoly(simplify(ficheElevData,80)));
+  overlays.push(`path-7+ffffff-0.35(${allEnc})`);
+
+  // Gekleurde segmenten per hellingsgraad
+  const runs=[]; let i=1;
+  while(i<ficheElevData.length){
+    const col=ficheGradeColor(ficheElevData[i].grade);
+    const runPts=[ficheElevData[i-1]];
+    while(i<ficheElevData.length && ficheGradeColor(ficheElevData[i].grade)===col){
+      runPts.push(ficheElevData[i]); i++;
+    }
+    runs.push({col, pts:runPts});
+  }
+  const maxPts=runs.length<=20?40:runs.length<=60?20:runs.length<=150?10:6;
+  runs.forEach(run=>{
+    const simp=simplify(run.pts,maxPts);
+    if(simp.length<2) return;
+    const hex=colorHex[run.col]||'2ecc71';
+    overlays.push(`path-4+${hex}(${encodeURIComponent(encPoly(simp))})`);
+  });
+
+  // Km-pins
+  const totalDist=ficheElevData[ficheElevData.length-1].dist;
+  function ptAtDist(td){
+    for(let j=0;j<ficheElevData.length;j++) if(ficheElevData[j].dist>=td) return ficheElevData[j];
+    return ficheElevData[ficheElevData.length-1];
+  }
+  for(let km=1;km<totalDist-0.3;km++){
+    const pt=ptAtDist(km);
+    overlays.push(`pin-s-${km}+ffffff(${pt.lon.toFixed(5)},${pt.lat.toFixed(5)})`);
+  }
+
+  // Start (groen) en eind (rood)
+  const sp=ficheElevData[0], ep=ficheElevData[ficheElevData.length-1];
+  overlays.push(`pin-s+00c896(${sp.lon.toFixed(5)},${sp.lat.toFixed(5)})`);
+  overlays.push(`pin-s+e05252(${ep.lon.toFixed(5)},${ep.lat.toFixed(5)})`);
+
+  let url=`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlays.join(',')}/${bbox}/${W}x${H}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+
+  // URL te lang → verwijder halo
+  if(url.length>8000){
+    const o2=overlays.filter(o=>!o.includes('+ffffff-0.35'));
+    url=`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${o2.join(',')}/${bbox}/${W}x${H}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+  }
+
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error(`Mapbox HTTP ${res.status}`);
+    const blob=await res.blob();
+    const imgUrl=URL.createObjectURL(blob);
+    const img=document.createElement('img');
+    img.src=imgUrl;
+    img.style.cssText='width:100%;display:block;border-radius:8px';
+    img.alt='Kaartoverzicht route';
+    wrap.innerHTML='';
+    wrap.appendChild(img);
+  } catch(err){
+    console.warn('Mapbox Static API fout:',err);
+    wrap.innerHTML=`<div style="padding:16px;background:#f8f8f8;border-radius:8px;font-size:12px;color:var(--stone);text-align:center">⚠️ Kaart kon niet geladen worden voor print<br><small>${err.message}</small></div>`;
+  }
+}
+
+function genereerPrintProfiel(){
+  return new Promise(resolve=>{
+  const wrap = document.getElementById('fichePrintProfiel');
+  if(!wrap || !ficheElevData.length){ if(wrap) wrap.innerHTML=''; resolve(); return; }
+
+  const W=700, H=180;
+  const canvas = document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const L=56,R=16,T=16,B=36;
+  const w=W-L-R, h=H-T-B;
+
+  const totalD=ficheElevData[ficheElevData.length-1].dist;
+  const elevs=ficheElevData.map(p=>p.elev);
+  const minE=Math.min(...elevs),maxE=Math.max(...elevs);
+  const yMin=Math.floor(minE/10)*10-15,yMax=Math.ceil(maxE/10)*10+15;
+
+  ctx.fillStyle='#050505';ctx.fillRect(0,0,W,H);
+
+  // Grid
+  for(let i=0;i<=5;i++){
+    const v=yMin+(i*(yMax-yMin)/5);
+    const y=T+h-((v-yMin)/(yMax-yMin))*h;
+    ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+w,y);ctx.stroke();
+    ctx.font='bold 11px DM Sans,sans-serif';ctx.fillStyle='rgba(0,200,150,.75)';
+    ctx.textAlign='right';ctx.fillText(Math.round(v)+'m',L-5,y+4);
+  }
+
+  // Hoogtevlakken
+  const yBase=T+h;let si=1;
+  while(si<ficheElevData.length){
+    const col=ficheGradeColor(ficheElevData[si].grade);
+    let ei=si;
+    while(ei+1<ficheElevData.length && ficheGradeColor(ficheElevData[ei+1].grade)===col) ei++;
+    ctx.beginPath();
+    const x0=L+(ficheElevData[si-1].dist/totalD)*w;
+    const y0=T+h-((ficheElevData[si-1].elev-yMin)/(yMax-yMin))*h;
+    ctx.moveTo(x0,yBase);ctx.lineTo(x0,y0);
+    for(let i=si;i<=ei;i++) ctx.lineTo(L+(ficheElevData[i].dist/totalD)*w,T+h-((ficheElevData[i].elev-yMin)/(yMax-yMin))*h);
+    ctx.lineTo(L+(ficheElevData[ei].dist/totalD)*w,yBase);
+    ctx.closePath();ctx.fillStyle=col;ctx.fill();
+    si=ei+1;
+  }
+
+  // X ticks + labels
+  const step=totalD>20?5:totalD>5?1:0.5;
+  for(let d=0;d<=totalD+.001;d+=.5){
+    const x=L+(d/totalD)*w;
+    const isKm=Math.abs(d-Math.round(d))<.01;
+    ctx.strokeStyle=isKm?'rgba(255,255,255,.9)':'rgba(255,255,255,.6)';
+    ctx.lineWidth=isKm?1.5:1;
+    ctx.beginPath();ctx.moveTo(x,T+h);ctx.lineTo(x,T+h+(isKm?8:4));ctx.stroke();
+  }
+  ctx.font='bold 10px DM Sans,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';
+  for(let d=0;d<=totalD+.001;d+=step){
+    const x=L+(d/totalD)*w;
+    ctx.fillText(d.toFixed(d<1?1:0)+'km',x,T+h+B-2);
+  }
+
+  wrap.innerHTML='';
+  wrap.appendChild(canvas);
+  resolve();
+  });
+}
+
+function genereerPrintFotos(){
+  return new Promise(resolve=>{
+    // Enkel de hoofdfoto — altijd 16:9, geen formaat-problemen
+    let wrap = document.getElementById('fichePrintFotos');
+    if(!wrap){
+      wrap = document.createElement('div');
+      wrap.id = 'fichePrintFotos';
+      // Voeg in na de foto blok
+      const fotoBlok = document.getElementById('fichHoofdFotoImg')?.closest('.fiche-blok');
+      if(fotoBlok) fotoBlok.parentNode.insertBefore(wrap, fotoBlok.nextSibling);
+      else { const pg=document.getElementById('fichePage'); if(pg) pg.appendChild(wrap); }
+    }
+    wrap.innerHTML='';
+    if(!ficheFotos.length){ resolve(); return; }
+    const img=document.createElement('img');
+    img.src=blobUrl(ficheFotos[0].blob, ficheFotos[0].type);
+    img.alt='Hoofdfoto wandeling';
+    // 16:9 verhouding, volledige breedte
+    img.style.cssText='width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:6px;page-break-inside:avoid';
+    wrap.appendChild(img);
+    resolve();
+  });
+}
 let rvMap = null, rvSyncMarker = null, rvStartMarker = null, rvEndMarker = null;
 let rvKmMarkers = [];
 let rvKmZichtbaar = true;
 let rvElevData = [], rvStats = {}, rvProfiel = 'sport';
+
+// Route viewer kaartlagen
+let rvBaseLayers = {};
+let rvWaymarkedLayer = null;
+let rvActiveBase = 'osm';
+
+function toggleRvLayerPanel(){
+  document.getElementById('rvLayerPanel').classList.toggle('open');
+}
+
+function wisselRvLaag(radio){
+  if(!rvMap) return;
+  // Verwijder huidige basislaag — polylines/markers blijven want die zitten op eigen pane
+  Object.values(rvBaseLayers).forEach(l=>{ if(rvMap.hasLayer(l)) rvMap.removeLayer(l); });
+  rvActiveBase = radio.value;
+  rvBaseLayers[rvActiveBase].addTo(rvMap);
+  // Waymarked overlay bovenop houden
+  if(rvMap.hasLayer(rvWaymarkedLayer)){
+    rvWaymarkedLayer.remove();
+    rvWaymarkedLayer.addTo(rvMap);
+  }
+}
+
+function toggleRvWaymarked(checkbox){
+  if(!rvMap) return;
+  checkbox.checked ? rvWaymarkedLayer.addTo(rvMap) : rvMap.removeLayer(rvWaymarkedLayer);
+}
 
 const RV_PROFILES = {
   sport:    { low:6,  high:15, labels:['0–6%','6–15%','15%+'],  name:'Sportief' },
@@ -2345,13 +3479,52 @@ async function openRouteViewer(etappeID){
   await new Promise(r=>setTimeout(r,80));
   if(!rvMap){
     rvMap = L.map('rvMap').setView([rvElevData[0].lat,rvElevData[0].lon],13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(rvMap);
+
+    // Eigen pane voor de route — altijd bovenop de tiles
+    rvMap.createPane('routePane');
+    rvMap.getPane('routePane').style.zIndex = 450;
+
+    // Basislagen
+    rvBaseLayers.osm = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {attribution:'© OpenStreetMap',maxZoom:19}
+    );
+    rvBaseLayers.topo = L.tileLayer(
+      'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      {attribution:'© OpenTopoMap',maxZoom:17}
+    );
+    rvBaseLayers.satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {attribution:'© Esri World Imagery',maxZoom:19}
+    );
+    rvWaymarkedLayer = L.tileLayer(
+      'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+      {attribution:'© Waymarked Trails',opacity:0.7,maxZoom:19}
+    );
+
+    // Start met OSM, reset radio
+    rvBaseLayers.osm.addTo(rvMap);
+    rvActiveBase = 'osm';
+    const osmRadio = document.querySelector('input[name="rvLayer"][value="osm"]');
+    if(osmRadio) osmRadio.checked = true;
+    const wayTgl = document.getElementById('rvWaymarkedToggle');
+    if(wayTgl) wayTgl.checked = false;
+
+    // Sluit layer panel bij klik buiten
+    document.addEventListener('click', e => {
+      const ctrl = document.getElementById('rvLayerCtrl');
+      if(ctrl && !ctrl.contains(e.target)){
+        document.getElementById('rvLayerPanel').classList.remove('open');
+      }
+    });
   }
 
-  // Verwijder vorige lagen
+  // Verwijder vorige route-lagen (niet de tiles)
   rvMap.eachLayer(l=>{ if(l instanceof L.Polyline||l instanceof L.Marker) rvMap.removeLayer(l); });
+  if(rvStartMarker){ rvMap.removeLayer(rvStartMarker); rvStartMarker=null; }
+  if(rvEndMarker)  { rvMap.removeLayer(rvEndMarker);   rvEndMarker=null;   }
 
-  // Teken gekleurde route segmenten
+  // Teken gekleurde route segmenten op routePane (blijft zichtbaar bij laagwissel)
   const coords = rvElevData.map(p=>[p.lat,p.lon]);
   let si=1;
   while(si<rvElevData.length){
@@ -2359,15 +3532,17 @@ async function openRouteViewer(etappeID){
     let ei=si;
     while(ei+1<rvElevData.length && rvGradeColor(rvElevData[ei+1].grade)===col) ei++;
     const segCoords=[coords[si-1],...coords.slice(si,ei+1)];
-    L.polyline(segCoords,{color:col,weight:5,opacity:.95,lineJoin:'round'}).addTo(rvMap);
+    L.polyline(segCoords,{color:col,weight:5,opacity:.95,lineJoin:'round',pane:'routePane'}).addTo(rvMap);
     si=ei+1;
   }
 
-  // Start/eind markers
+  // Start/eind markers op routePane
   if(rvStartMarker) rvMap.removeLayer(rvStartMarker);
   if(rvEndMarker)   rvMap.removeLayer(rvEndMarker);
-  rvStartMarker = L.circleMarker([rvElevData[0].lat,rvElevData[0].lon],{radius:7,color:'#00c896',fillColor:'#00c896',fillOpacity:1,weight:2}).addTo(rvMap);
-  rvEndMarker   = L.circleMarker([rvElevData[rvElevData.length-1].lat,rvElevData[rvElevData.length-1].lon],{radius:7,color:'#e05252',fillColor:'#e05252',fillOpacity:1,weight:2}).addTo(rvMap);
+  rvStartMarker = L.circleMarker([rvElevData[0].lat,rvElevData[0].lon],
+    {radius:7,color:'#00c896',fillColor:'#00c896',fillOpacity:1,weight:2,pane:'routePane'}).addTo(rvMap);
+  rvEndMarker   = L.circleMarker([rvElevData[rvElevData.length-1].lat,rvElevData[rvElevData.length-1].lon],
+    {radius:7,color:'#e05252',fillColor:'#e05252',fillOpacity:1,weight:2,pane:'routePane'}).addTo(rvMap);
 
   // Km-labels langs de route
   rvKmMarkers.forEach(m=>rvMap.removeLayer(m));
@@ -2439,7 +3614,7 @@ function setRvProfiel(btn){
         const col=rvGradeColor(rvElevData[si].grade);
         let ei=si;
         while(ei+1<rvElevData.length && rvGradeColor(rvElevData[ei+1].grade)===col) ei++;
-        L.polyline([coords[si-1],...coords.slice(si,ei+1)],{color:col,weight:5,opacity:.95,lineJoin:'round'}).addTo(rvMap);
+        L.polyline([coords[si-1],...coords.slice(si,ei+1)],{color:col,weight:5,opacity:.95,lineJoin:'round',pane:'routePane'}).addTo(rvMap);
         si=ei+1;
       }
     }
