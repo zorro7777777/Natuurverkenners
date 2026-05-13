@@ -300,6 +300,14 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 <header>
   <div class="logo-mark">🌿</div>
   <h1>Natuurverkenners &mdash; <em>Wandelbeheer</em></h1>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span id="exportInfo" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
+    <label style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:500;color:rgba(255,255,255,.85);cursor:pointer;white-space:nowrap;transition:all .12s" onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">
+      📂 Importeren
+      <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+    </label>
+    <button id="exportKnop" onclick="exportJSON()" style="background:var(--leaf);border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:500;color:#fff;cursor:pointer;white-space:nowrap;transition:background .12s" onmouseover="this.style.background='var(--sage)'" onmouseout="this.style.background='var(--leaf)'">📦 Exporteren</button>
+  </div>
 </header>
 <div class="app">
   <aside class="sidebar">
@@ -794,95 +802,87 @@ function sluitPersistentieBanner(){
   if(b){ b.remove(); document.querySelector('.app').style.marginTop=''; }
 }
 
-// ════════ AUTO-SNAPSHOT (noodanker) ════════
-// Slaat een lichte snapshot op in localStorage (zonder blobs — enkel metadata)
-// zodat we kunnen detecteren of IndexedDB leeg is na heropenen
+// ════════════════════════════════════════════════
+// BACKUP SYSTEEM — versioned met wijzigingsteller
+// ════════════════════════════════════════════════
+
+// Wijzigingsteller ophogen bij elke save
+function verhoogWijzigingsTeller(){
+  const huidig = parseInt(localStorage.getItem('nv_wijzigingen')||'0');
+  const nieuw = huidig + 1;
+  localStorage.setItem('nv_wijzigingen', nieuw.toString());
+  localStorage.setItem('nv_laatste_wijziging', Date.now().toString());
+  bijwerkExportKnop();
+  return nieuw;
+}
+
+// Exportknop bijwerken op basis van wijzigingen sinds laatste export
+function bijwerkExportKnop(){
+  const el = document.getElementById('exportInfo');
+  if(!el) return;
+  const totaal     = parseInt(localStorage.getItem('nv_wijzigingen')||'0');
+  const bijExport  = parseInt(localStorage.getItem('nv_wijzigingen_bij_export')||'0');
+  const tsExport   = localStorage.getItem('nv_laatste_export');
+  const tsWijzig   = localStorage.getItem('nv_laatste_wijziging');
+  const nieuw      = totaal - bijExport;
+
+  if(!tsExport){
+    el.innerHTML = `<span style="color:var(--warn);font-weight:600">⚠ Nog geen backup gemaakt</span>`;
+  } else if(nieuw <= 0){
+    const d = new Date(parseInt(tsExport)).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'});
+    el.innerHTML = `<span style="color:#2e7d32">✓ Backup actueel</span> <span style="opacity:.6;font-size:10px">${d}</span>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--warn);font-weight:600">↑ ${nieuw} wijziging${nieuw>1?'en':''} sinds backup</span>`;
+  }
+}
+
+// ════════ AUTO-SNAPSHOT (metadata noodanker in localStorage) ════════
 async function slaSnapshotOp(){
   try{
     const wands = await db.wandelingen.toArray();
     const etaps = await db.etappes.toArray();
-    const snapshot = {
-      ts: Date.now(),
-      wandelingen: wands.map(w=>({wandelingID:w.wandelingID,naam:w.naam,type:w.type,regio:w.regio})),
-      etappeCount: etaps.length
+    const snap  = {
+      ts:           Date.now(),
+      wandelingen:  wands.map(w=>({wandelingID:w.wandelingID,naam:w.naam,type:w.type,regio:w.regio})),
+      etappeCount:  etaps.length,
+      wijzigingen:  localStorage.getItem('nv_wijzigingen')||'0'
     };
-    localStorage.setItem('nv_snapshot', JSON.stringify(snapshot));
-  } catch(e){ /* stille fout */ }
+    localStorage.setItem('nv_snapshot', JSON.stringify(snap));
+  } catch(e){}
 }
 
 async function controleerDataIntegriteit(){
-  const snapshot = localStorage.getItem('nv_snapshot');
-  if(!snapshot) return; // eerste keer, geen probleem
-  const snap = JSON.parse(snapshot);
+  const raw = localStorage.getItem('nv_snapshot');
+  if(!raw) return;
+  const snap = JSON.parse(raw);
   if(!snap.wandelingen?.length) return;
-  const huidigAantal = await db.wandelingen.count();
-  if(huidigAantal === 0 && snap.wandelingen.length > 0){
-    // IndexedDB is leeg maar snapshot zegt er was data — waarschuw!
-    toonDataVerliesWaarschuwing(snap);
-  }
+  const aantal = await db.wandelingen.count();
+  if(aantal === 0 && snap.wandelingen.length > 0) toonDataVerliesWaarschuwing(snap);
 }
 
 function toonDataVerliesWaarschuwing(snap){
   const d = new Date(snap.ts).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'});
-  const banner = document.createElement('div');
-  banner.style.cssText = `position:fixed;top:58px;left:0;right:0;z-index:150;background:#f8d7da;border-bottom:2px solid #dc3545;padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:13px;color:#721c24`;
-  banner.innerHTML = `
-    <span style="font-size:20px">🔴</span>
-    <span style="flex:1"><strong>Opgelet:</strong> Je had ${snap.wandelingen.length} wandeling(en) en ${snap.etappeCount} etappe(s) opgeslagen (laatste backup: ${d}). De lokale database lijkt leeg. Herstel via een JSON-backup.</span>
-    <button onclick="document.getElementById('importInput').click()" style="background:#dc3545;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#fff">📂 Backup herstellen</button>
-    <button onclick="this.parentElement.remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#721c24;padding:0 4px">×</button>`;
-  document.body.appendChild(banner);
-  document.querySelector('.app').style.marginTop = '60px';
+  const b = document.createElement('div');
+  b.id = 'verliesBanner';
+  b.style.cssText='position:fixed;top:58px;left:0;right:0;z-index:151;background:#f8d7da;border-bottom:2px solid #dc3545;padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:13px;color:#721c24';
+  b.innerHTML=`<span style="font-size:20px">🔴</span>
+    <span style="flex:1"><strong>Opgelet:</strong> Laatste registratie toont ${snap.wandelingen.length} wandeling(en) en ${snap.etappeCount} etappe(s) (${d}). Database lijkt leeg. Herstel via een backup.</span>
+    <label style="background:#dc3545;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#fff;white-space:nowrap">
+      📂 Backup herstellen<input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+    </label>
+    <button onclick="document.getElementById('verliesBanner').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#721c24;padding:0 4px">×</button>`;
+  document.body.appendChild(b);
 }
 
-// ════════ JSON EXPORT ════════
-async function exportJSON(){
-  toon('📦 Backup voorbereiden…');
-  try{
-    const wands = await db.wandelingen.toArray();
-    const etaps = await db.etappes.toArray();
-
-    // Converteer ArrayBuffers naar base64 voor JSON
-    const etapsGeserialiseerd = etaps.map(e => {
-      const kopie = {...e};
-      if(kopie.gpxBlob)     kopie.gpxBlob     = bufNaarB64(kopie.gpxBlob);
-      if(kopie.hoofdFoto)   kopie.hoofdFoto   = bufNaarB64(kopie.hoofdFoto);
-      if(kopie.extraFotos)  kopie.extraFotos  = kopie.extraFotos.map(f=>({...f, blob: bufNaarB64(f.blob)}));
-      return kopie;
-    });
-
-    const backup = {
-      versie: '1.0',
-      app: 'Natuurverkenners Wandelbeheer',
-      exportDatum: new Date().toISOString(),
-      wandelingen: wands,
-      etappes: etapsGeserialiseerd
-    };
-
-    const json = JSON.stringify(backup, null, 2);
-    const blob = new Blob([json], {type:'application/json'});
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const datum = new Date().toISOString().slice(0,10);
-    a.href = url;
-    a.download = `natuurverkenners-backup-${datum}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    localStorage.setItem('nv_laatste_export', Date.now().toString());
-    toon(`✅ Backup gedownload (${wands.length} wandelingen · ${etaps.length} etappes)`);
-    bijwerkExportInfo();
-  } catch(err){
-    toon('❌ Export mislukt: ' + err.message);
-    console.error(err);
-  }
-}
-
+// ════════ BLOB HULPFUNCTIES ════════
 function bufNaarB64(buf){
   if(!buf) return null;
+  // Verwerk in stukken om stackoverflows te vermijden bij grote bestanden
   const bytes = new Uint8Array(buf instanceof ArrayBuffer ? buf : buf);
+  const CHUNK = 8192;
   let bin = '';
-  for(let i=0;i<bytes.byteLength;i++) bin += String.fromCharCode(bytes[i]);
+  for(let i=0;i<bytes.byteLength;i+=CHUNK)
+    bin += String.fromCharCode(...bytes.subarray(i, i+CHUNK));
   return btoa(bin);
 }
 function b64NaarBuf(b64){
@@ -894,119 +894,175 @@ function b64NaarBuf(b64){
   return buf;
 }
 
+// ════════ JSON EXPORT ════════
+async function exportJSON(){
+  const exportKnop = document.getElementById('exportKnop');
+  if(exportKnop){ exportKnop.disabled=true; exportKnop.textContent='⏳ Bezig…'; }
+  try{
+    const wands = await db.wandelingen.toArray();
+    const etaps = await db.etappes.toArray();
+
+    const etapsGeserialiseerd = etaps.map(e => {
+      const k = {...e};
+      if(k.gpxBlob)    k.gpxBlob    = bufNaarB64(k.gpxBlob);
+      if(k.hoofdFoto)  k.hoofdFoto  = bufNaarB64(k.hoofdFoto);
+      if(k.extraFotos) k.extraFotos = k.extraFotos.map(f=>({...f, blob:bufNaarB64(f.blob)}));
+      return k;
+    });
+
+    const totaalWijzigingen = parseInt(localStorage.getItem('nv_wijzigingen')||'0');
+    const backup = {
+      versie:            '1.1',
+      app:               'Natuurverkenners Wandelbeheer',
+      exportDatum:       new Date().toISOString(),
+      aantalWijzigingen: totaalWijzigingen,
+      wandelingen:       wands,
+      etappes:           etapsGeserialiseerd
+    };
+
+    const json = JSON.stringify(backup);
+    const blob = new Blob([json],{type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const datum= new Date().toISOString().slice(0,10);
+    a.href=url; a.download=`natuurverkenners-backup-${datum}.json`; a.click();
+    URL.revokeObjectURL(url);
+
+    // Registreer export-toestand
+    localStorage.setItem('nv_laatste_export',         Date.now().toString());
+    localStorage.setItem('nv_wijzigingen_bij_export', totaalWijzigingen.toString());
+    bijwerkExportKnop();
+    toon(`✅ Backup klaar · ${wands.length} wandelingen · ${etaps.length} etappes`);
+  } catch(err){
+    toon('❌ Export mislukt: '+err.message); console.error(err);
+  } finally {
+    if(exportKnop){ exportKnop.disabled=false; exportKnop.textContent='📦 Exporteren'; }
+  }
+}
+
 // ════════ JSON IMPORT ════════
 async function importJSON(input){
   const file = input.files[0];
-  input.value = '';
+  input.value='';
   if(!file) return;
 
+  let backup;
   try{
-    const tekst = await file.text();
-    const backup = JSON.parse(tekst);
+    backup = JSON.parse(await file.text());
+  } catch {
+    toon('❌ Ongeldig JSON-bestand'); return;
+  }
 
-    // Valideer
-    if(!backup.wandelingen || !backup.etappes || backup.app !== 'Natuurverkenners Wandelbeheer'){
-      toon('❌ Ongeldig backup-bestand');
-      return;
-    }
+  if(!backup.wandelingen||!backup.etappes||backup.app!=='Natuurverkenners Wandelbeheer'){
+    toon('❌ Dit is geen Natuurverkenners backup'); return;
+  }
 
-    const aantalW = backup.wandelingen.length;
-    const aantalE = backup.etappes.length;
-    const exportDatum = backup.exportDatum
-      ? new Date(backup.exportDatum).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'})
-      : '?';
+  const aantalW   = backup.wandelingen.length;
+  const aantalE   = backup.etappes.length;
+  const datumStr  = backup.exportDatum
+    ? new Date(backup.exportDatum).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'})
+    : 'onbekend';
+  const wijz      = backup.aantalWijzigingen ? `· ${backup.aantalWijzigingen} wijzigingen` : '';
 
-    bevestigImport(
-      `Backup van ${exportDatum}\n${aantalW} wandeling(en) · ${aantalE} etappe(s)`,
-      async (modus) => {
-        toon('⏳ Bezig met herstellen…');
-        try{
-          // Deserializeer blobs terug naar ArrayBuffer
-          const etapsHersteld = backup.etappes.map(e => {
-            const kopie = {...e};
-            if(kopie.gpxBlob)    kopie.gpxBlob    = b64NaarBuf(kopie.gpxBlob);
-            if(kopie.hoofdFoto)  kopie.hoofdFoto  = b64NaarBuf(kopie.hoofdFoto);
-            if(kopie.extraFotos) kopie.extraFotos = kopie.extraFotos.map(f=>({...f, blob:b64NaarBuf(f.blob)}));
-            return kopie;
-          });
+  // Toon import-dialoog
+  toonImportDialoog(
+    `<strong>📂 Backup importeren</strong>`,
+    `Datum: ${datumStr} ${wijz}<br>${aantalW} wandeling(en) · ${aantalE} etappe(s)`,
+    async (modus) => {
+      if(!modus) return;
+      toon('⏳ Herstellen…');
 
-          if(modus === 'vervang'){
-            await db.etappes.clear();
-            await db.wandelingen.clear();
+      // Deserializeer blobs
+      const etapsHersteld = backup.etappes.map(e=>{
+        const k={...e};
+        if(k.gpxBlob)    k.gpxBlob    = b64NaarBuf(k.gpxBlob);
+        if(k.hoofdFoto)  k.hoofdFoto  = b64NaarBuf(k.hoofdFoto);
+        if(k.extraFotos) k.extraFotos = k.extraFotos.map(f=>({...f,blob:b64NaarBuf(f.blob)}));
+        return k;
+      });
+
+      try{
+        if(modus==='vervang'){
+          await db.etappes.clear();
+          await db.wandelingen.clear();
+          for(const w of backup.wandelingen) await db.wandelingen.put(w);
+          for(const e of etapsHersteld)      await db.etappes.put(e);
+        } else {
+          // Samenvoegen: nieuwe IDs om conflicten te vermijden
+          const idMap={};
+          for(const w of backup.wandelingen){
+            const {wandelingID,...rest}=w;
+            idMap[wandelingID]=await db.wandelingen.add(rest);
           }
-
-          // Bij samenvoegen: nieuwe IDs genereren om conflicten te vermijden
-          if(modus === 'samenvoeg'){
-            const idMap = {};
-            for(const w of backup.wandelingen){
-              const oudID = w.wandelingID;
-              const {wandelingID, ...rest} = w;
-              const nieuwID = await db.wandelingen.add(rest);
-              idMap[oudID] = nieuwID;
-            }
-            for(const e of etapsHersteld){
-              const {etappeID, wandelingID, ...rest} = e;
-              await db.etappes.add({...rest, wandelingID: idMap[wandelingID]||wandelingID});
-            }
-          } else {
-            // Vervang: IDs behouden
-            for(const w of backup.wandelingen){
-              await db.wandelingen.put(w);
-            }
-            for(const e of etapsHersteld){
-              await db.etappes.put(e);
-            }
+          for(const e of etapsHersteld){
+            const {etappeID,wandelingID,...rest}=e;
+            await db.etappes.add({...rest,wandelingID:idMap[wandelingID]??wandelingID});
           }
-
-          await slaSnapshotOp();
-          await laadWandelingen();
-          huidigeWandelingID = null;
-          document.getElementById('mainContent').innerHTML = leegScherm(
-            'Backup hersteld ✓',
-            `${aantalW} wandeling(en) en ${aantalE} etappe(s) geladen. Kies een wandeling links.`
-          );
-          // Verwijder eventuele waarschuwingsbanner
-          document.querySelector('[style*="f8d7da"]')?.remove();
-          document.querySelector('.app').style.marginTop = '';
-          toon(`✅ ${aantalW} wandelingen en ${aantalE} etappes hersteld`);
-        } catch(err){
-          toon('❌ Herstel mislukt: ' + err.message);
-          console.error(err);
         }
+
+        // Herstel wijzigingsteller op basis van backup
+        if(backup.aantalWijzigingen){
+          localStorage.setItem('nv_wijzigingen', backup.aantalWijzigingen.toString());
+          localStorage.setItem('nv_wijzigingen_bij_export', backup.aantalWijzigingen.toString());
+          localStorage.setItem('nv_laatste_export', Date.now().toString());
+        }
+
+        await slaSnapshotOp();
+        huidigeWandelingID=null;
+        await laadWandelingen();
+        document.getElementById('mainContent').innerHTML=leegScherm(
+          'Backup hersteld ✓',
+          `${aantalW} wandeling(en) en ${aantalE} etappe(s) geladen. Kies een wandeling links.`
+        );
+        document.getElementById('verliesBanner')?.remove();
+        bijwerkExportKnop();
+        toon(`✅ ${aantalW} wandelingen en ${aantalE} etappes hersteld`);
+      } catch(err){
+        toon('❌ Herstel mislukt: '+err.message); console.error(err);
       }
-    );
-  } catch(err){
-    toon('❌ Kon bestand niet lezen: ' + err.message);
-  }
+    }
+  );
 }
 
-// Aangepaste bevestigingsdialoog voor import met twee opties
-function bevestigImport(info, callback){
-  const bg = document.getElementById('confirmBg');
-  document.getElementById('confirmTekst').innerHTML =
-    `<strong>Backup importeren</strong><br><span style="font-size:12px;color:var(--stone)">${info.replace('\n','<br>')}</span><br><br>Hoe wil je importeren?`;
+// Import-dialoog: eigen modal zodat standaard confirm-dialoog niet verstoord wordt
+function toonImportDialoog(titel, info, callback){
+  // Hergebruik confirm-bg maar reset knoppen proper
+  const bg   = document.getElementById('confirmBg');
+  const tekst= document.getElementById('confirmTekst');
+  tekst.innerHTML=`${titel}<br><span style="font-size:12px;color:var(--stone);font-weight:400">${info}</span><br><br><span style="font-size:13px">Hoe wil je importeren?</span>`;
   bg.classList.add('open');
-  document.getElementById('confirmOkBtn').style.display = 'none';
-  // Voeg tijdelijke knoppen toe
+
   const btns = document.querySelector('.confirm-btns');
-  btns.innerHTML = `
-    <button class="btn-cancel" onclick="sluitConfirm()">Annuleren</button>
-    <button class="btn-save" style="background:var(--warn);border:none;border-radius:8px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:500;color:#fff;cursor:pointer" onclick="sluitConfirm();arguments[0].stopPropagation();" id="btnSamenvoeg">+ Samenvoegen</button>
-    <button class="btn-del" id="btnVervang">↺ Vervangen</button>`;
-  document.getElementById('btnSamenvoeg').onclick = ()=>{ sluitConfirm(); callback('samenvoeg'); };
-  document.getElementById('btnVervang').onclick  = ()=>{ sluitConfirm(); callback('vervang'); };
+  // Vervang knoppen — kloon de container om event listeners te resetten
+  const nieuw = btns.cloneNode(false);
+  btns.parentNode.replaceChild(nieuw, btns);
+
+  const btnAnnuleer = document.createElement('button');
+  btnAnnuleer.className='btn-cancel';
+  btnAnnuleer.textContent='Annuleren';
+  btnAnnuleer.onclick=()=>{ bg.classList.remove('open'); callback(null); };
+
+  const btnSamen = document.createElement('button');
+  btnSamen.style.cssText='background:var(--warn);border:none;border-radius:8px;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:500;color:#fff;cursor:pointer';
+  btnSamen.textContent='+ Samenvoegen';
+  btnSamen.onclick=()=>{ bg.classList.remove('open'); callback('samenvoeg'); };
+
+  const btnVervang = document.createElement('button');
+  btnVervang.className='btn-del';
+  btnVervang.textContent='↺ Vervangen';
+  btnVervang.onclick=()=>{ bg.classList.remove('open'); callback('vervang'); };
+
+  nieuw.append(btnAnnuleer, btnSamen, btnVervang);
 }
 
-function bijwerkExportInfo(){
-  const ts = localStorage.getItem('nv_laatste_export');
-  const el = document.getElementById('exportInfo');
-  if(!el) return;
-  if(ts){
-    const d = new Date(parseInt(ts)).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'});
-    el.textContent = `Laatste export: ${d}`;
-  } else {
-    el.textContent = 'Nog geen export gemaakt';
-  }
+// Herstel confirm-btns na gewone bevestig() aanroep
+function sluitConfirm(){
+  document.getElementById('confirmBg').classList.remove('open');
+  // Reset naar standaard knop-layout
+  const btns=document.querySelector('.confirm-btns');
+  if(btns) btns.innerHTML=`
+    <button class="btn-cancel" onclick="sluitConfirm()">Annuleren</button>
+    <button class="btn-del" id="confirmOkBtn">Verwijderen</button>`;
 }
 
 // ════════ STATE ════════
@@ -1073,7 +1129,6 @@ function leegScherm(t,s){return`<div class="empty-state"><div class="empty-icon"
 let toastT;
 function toon(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800)}
 function bevestig(tekst,cb){document.getElementById('confirmTekst').textContent=tekst;document.getElementById('confirmBg').classList.add('open');document.getElementById('confirmOkBtn').onclick=()=>{sluitConfirm();cb()}}
-function sluitConfirm(){document.getElementById('confirmBg').classList.remove('open')}
 function bekijkFoto(src){document.getElementById('pvImg').src=src;document.getElementById('pvBg').classList.add('open')}
 
 // ════════ TABS ════════
@@ -1225,6 +1280,7 @@ async function saveWandeling(){
     const id=await db.wandelingen.add(data);
     huidigeWandelingID=id;
     setWandKnopStaat('saved');
+    verhoogWijzigingsTeller();
     await slaSnapshotOp();
     setTimeout(()=>{sluitWandelingModal();toonWandelingInhoud(id);laadWandelingen()},600);
   }
@@ -1457,8 +1513,49 @@ hfZone.addEventListener('dragover',e=>{e.preventDefault();hfZone.classList.add('
 hfZone.addEventListener('dragleave',()=>hfZone.classList.remove('dragover'));
 hfZone.addEventListener('drop',e=>{e.preventDefault();hfZone.classList.remove('dragover');const file=e.dataTransfer.files[0];if(file&&file.type.startsWith('image/')){const inp=document.getElementById('hoofdfotoInput');const dt=new DataTransfer();dt.items.add(file);inp.files=dt.files;verwerkHoofdFoto(inp)}});
 
-// ════════ EXTRA FOTO'S ════════
-async function verwerkExtraFotos(input){for(const file of input.files){const buf=await file.arrayBuffer();extraFotos.push({naam:file.name,blob:buf,type:file.type})}input.value='';hertekenExtraStrip();etappeDirty(5)}
+// ════════ EXTRA FOTO'S — alle formaten, gecomprimeerd ════════
+async function verwerkExtraFotos(input){
+  for(const file of input.files){
+    const gecomprimeerd = await comprimeerFoto(file, 1920, 0.80);
+    extraFotos.push(gecomprimeerd);
+  }
+  input.value='';
+  hertekenExtraStrip();
+  etappeDirty(5);
+}
+
+// Universele foto-compressie: max breedte/hoogte, kwaliteit, alle oriëntaties
+function comprimeerFoto(file, maxPx, kwaliteit){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      const W = img.naturalWidth, H = img.naturalHeight;
+      // Bereken schaal zodat langste zijde <= maxPx
+      const schaal = Math.min(1, maxPx / Math.max(W, H));
+      const nW = Math.round(W * schaal);
+      const nH = Math.round(H * schaal);
+      const canvas = document.createElement('canvas');
+      canvas.width=nW; canvas.height=nH;
+      canvas.getContext('2d').drawImage(img, 0, 0, nW, nH);
+      canvas.toBlob(blob=>{
+        const fr = new FileReader();
+        fr.onload = ()=> resolve({
+          naam: file.name,
+          blob: fr.result,
+          type: 'image/jpeg',
+          origBreed: W,
+          origHoog: H
+        });
+        fr.onerror = reject;
+        fr.readAsArrayBuffer(blob);
+      }, 'image/jpeg', kwaliteit);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 function hertekenExtraStrip(){const strip=document.getElementById('photoStrip');strip.innerHTML='';extraFotos.forEach((f,i)=>{const url=blobUrl(f.blob,f.type);const w=document.createElement('div');w.className='pt-wrap';w.innerHTML=`<img src="${url}" onclick="bekijkFoto('${url}')"><button class="pt-remove" onclick="verwijderExtra(${i})">✕</button>`;strip.appendChild(w)})}
 function verwijderExtra(i){extraFotos.splice(i,1);hertekenExtraStrip()}
 
@@ -1494,6 +1591,7 @@ async function saveEtappe(){
   try{
     if(bewerktEtappeID){await db.etappes.update(bewerktEtappeID,data);toon('Etappe opgeslagen ✓')}
     else{data.aanmaakdatum=Date.now();await db.etappes.add(data);toon('Etappe toegevoegd ✓')}
+    verhoogWijzigingsTeller();
     await slaSnapshotOp();
     setEtappeKnopStaat('saved');
     setTimeout(()=>{sluitEtappeModal();toonWandelingInhoud(huidigeWandelingID);laadWandelingen()},600);
