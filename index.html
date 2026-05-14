@@ -3235,6 +3235,10 @@ function ficheGaNaar(idx){
 
 function sluitFiche(){
   document.getElementById('ficheBg').classList.remove('open');
+  const pk=document.getElementById('fichePrintKaart');
+  const pp=document.getElementById('fichePrintProfiel');
+  if(pk) pk.style.display='none';
+  if(pp) pp.style.display='none';
 }
 
 function printFiche(){
@@ -3248,13 +3252,16 @@ function printFiche(){
   ]).then(()=>{
     if(btn){ btn.textContent='🖨️ Afdrukken'; btn.disabled=false; }
     setTimeout(()=>{
+      const pk=document.getElementById('fichePrintKaart');
+      const pp=document.getElementById('fichePrintProfiel');
+      if(pk) pk.style.display='block';
+      if(pp) pp.style.display='block';
       document.getElementById('ficheBg').id='fichePrintRoot';
       window.print();
       setTimeout(()=>{
         document.getElementById('fichePrintRoot').id='ficheBg';
-        // Reset display na print
-        const pk=document.getElementById('fichePrintKaart');
-        if(pk) pk.style.display='';
+        if(pk) pk.style.display='none';
+        if(pp) pp.style.display='none';
       },500);
     },300);
   }).catch(err=>{
@@ -3393,7 +3400,7 @@ async function genereerPrintKaart(){
       img.alt='Kaartoverzicht route';
       // Expliciete stijl die werkt zowel in screen als print
       img.style.cssText='display:block;width:100%;max-width:100%;height:auto;border-radius:8px';
-      wrap.style.display='block'; // Zet wrap zichtbaar op scherm ook
+      wrap.style.display='none'; // Zet wrap verborgen op scherm ook
       wrap.appendChild(img);
 
       // Wacht tot afbeelding geladen is
@@ -3404,7 +3411,7 @@ async function genereerPrintKaart(){
       wrap.innerHTML=`<div style="padding:16px;background:#f8f8f8;border-radius:8px;font-size:12px;color:var(--danger);text-align:center">
         ⚠️ Kaart kon niet geladen worden<br><small>${err.message}</small>
       </div>`;
-      wrap.style.display='block';
+      wrap.style.display='none';
       resolve();
     }
   });
