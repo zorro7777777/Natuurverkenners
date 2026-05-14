@@ -480,10 +480,12 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .fiche-kaart-wrap{border-radius:10px;overflow:hidden;border:1.5px solid var(--mist);height:300px;position:relative}
 #ficheMap{width:100%;height:100%}
 /* Print versies van kaart en profiel — canvas gebaseerd, geen externe tiles */
-#fichePrintKaart{display:none;border-radius:10px;overflow:hidden;border:1.5px solid var(--mist);width:100%}
-#fichePrintKaart canvas{width:100%!important;height:auto!important;display:block}
-#fichePrintProfiel{display:none;border-radius:10px;overflow:hidden;border:1.5px solid #222;width:100%}
+#fichePrintKaart{display:none!important;width:100%;overflow:hidden}
+#fichePrintKaart img{width:100%;height:auto;display:block;border-radius:8px}
+#fichePrintProfiel{display:none!important;width:100%;overflow:hidden}
 #fichePrintProfiel canvas{width:100%!important;height:auto!important;display:block}
+#fichePrintFotos{display:none!important;width:100%}
+#fichePrintFotos img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:6px}
 .fiche-legenda{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
 .fkl-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--stone)}
 .fkl-dot{width:14px;height:8px;border-radius:2px;flex-shrink:0}
@@ -502,9 +504,6 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 .fiche-sdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:all .15s}
 .fiche-sdot.active{background:#fff;width:20px;border-radius:4px}
 .fiche-foto-cnt{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 9px;border-radius:12px;backdrop-filter:blur(4px)}
-/* Print fotos — één per rij, vaste hoogte, object-fit:cover */
-#fichePrintFotos{display:none}
-#fichePrintFotos img{width:100%;height:180px;object-fit:cover;display:block;border-radius:6px;margin-bottom:6px;break-inside:avoid}
 .fiche-footer{text-align:center;font-size:10px;color:var(--stone);padding-top:14px;border-top:1px solid var(--mist);line-height:1.6}
 @media print{
   /* Verberg alles */
@@ -524,7 +523,7 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
   #fichePrintProfiel{display:block!important;width:100%!important}
   #fichePrintProfiel canvas{display:block!important;width:100%!important;height:auto!important}
   #fichePrintFotos{display:block!important;width:100%!important}
-  #fichePrintFotos img{display:block!important;width:100%!important;aspect-ratio:16/9!important;object-fit:cover!important;border-radius:6px;break-inside:avoid}
+  #fichePrintFotos img{display:block!important;width:100%!important;height:auto!important;border-radius:6px;break-inside:avoid}
   /* Layout */
   .fiche-page{padding:6px 10px!important;gap:12px!important;display:flex!important;flex-direction:column!important}
   .fiche-blok{break-inside:avoid;page-break-inside:avoid;display:flex!important;flex-direction:column!important}
@@ -596,13 +595,20 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 <header>
   <div class="logo-mark">🌿</div>
   <h1>Natuurverkenners &mdash; <em>Wandelbeheer</em></h1>
-  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative">
     <span id="exportInfo" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
     <label style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:500;color:rgba(255,255,255,.85);cursor:pointer;white-space:nowrap;transition:all .12s" onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">
       📂 Importeren
       <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
     </label>
     <button id="exportKnop" onclick="exportJSON()" style="background:var(--leaf);border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:500;color:#fff;cursor:pointer;white-space:nowrap;transition:background .12s" onmouseover="this.style.background='var(--sage)'" onmouseout="this.style.background='var(--leaf)'">📦 Exporteren</button>
+    <button id="mapboxInstellingBtn" onclick="toonMapboxTokenInvoer()" title="Mapbox token instellen" style="background:rgba(255,160,0,.3);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 10px;font-size:14px;cursor:pointer;transition:all .12s">⚙️</button>
+    <div id="mapboxTokenWrap" style="display:none;position:absolute;top:44px;right:0;background:var(--moss);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:14px;z-index:200;min-width:320px;flex-direction:column;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+      <div style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500">Mapbox token voor kaart bij afdrukken</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.4)">Gratis aan op <a href="https://account.mapbox.com/access-tokens/" target="_blank" style="color:var(--sage)">mapbox.com</a> — kies "Public token"</div>
+      <input type="text" id="mapboxTokenInput" placeholder="pk.eyJ1..." style="border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:8px 10px;font-size:12px;background:rgba(255,255,255,.1);color:#fff;width:100%">
+      <button onclick="slaMapboxTokenOp(document.getElementById('mapboxTokenInput').value)" style="background:var(--leaf);border:none;border-radius:7px;padding:8px;font-size:12px;font-weight:500;color:#fff;cursor:pointer;width:100%">Token opslaan</button>
+    </div>
   </div>
 </header>
 <div class="app">
@@ -1236,6 +1242,7 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
       <button class="fiche-tbtn" data-prof="sport"    onclick="ficheProfiel('sport')"    >Sportief</button>
       <button class="fiche-tbtn" data-prof="recreant" onclick="ficheProfiel('recreant')" >Recreant</button>
       <button class="fiche-tbtn" data-prof="hart"     onclick="ficheProfiel('hart')"     >Hartpatiënt</button>
+      <button class="fiche-tbtn" onclick="vernieuwKaartCache()" title="Kaart opnieuw genereren">🔄 Kaart</button>
       <button class="fiche-tbtn print" onclick="printFiche()">🖨️ Afdrukken</button>
       <button class="fiche-close" onclick="sluitFiche()">×</button>
     </div>
@@ -1262,11 +1269,21 @@ header h1 em{color:var(--sage);font-style:italic;font-weight:300}
 // ════════ DATABASE ════════
 // Vaste naam — NOOIT wijzigen, anders verlies je data
 const DB_NAAM = 'NatuurvVDB_v1';
-const DB_VERSIE = 1;
+const DB_VERSIE = 2;
 const db = new Dexie(DB_NAAM);
-db.version(DB_VERSIE).stores({
+db.version(1).stores({
   wandelingen:'++wandelingID,type,aktief',
   etappes:'++etappeID,wandelingID,volgorde,aktief'
+});
+// Versie 2: kaartBlob veld voor gecachede Mapbox kaart
+db.version(2).stores({
+  wandelingen:'++wandelingID,type,aktief',
+  etappes:'++etappeID,wandelingID,volgorde,aktief'
+}).upgrade(tx => {
+  // Geen datamigratie nodig — enkel nieuw veld dat optioneel is
+  return tx.table('etappes').toCollection().modify(e => {
+    if(e.kaartBlob === undefined) e.kaartBlob = null;
+  });
 });
 
 // ════════ PERSISTENTIE BEWAKER ════════
@@ -2890,7 +2907,7 @@ function renderFiche(e, w){
     <div class="fiche-blok">
       <div class="fiche-blok-titel"><span aria-hidden="true">🗺️</span> Kaart</div>
       <div class="fiche-kaart-wrap"><div id="ficheMap"></div></div>
-      <div id="fichePrintKaart"></div>
+      <div id="fichePrintKaart" style="margin:0;padding:0"></div>
       <div class="fiche-legenda">
         <div class="fkl-item"><div class="fkl-dot" style="background:#2ecc71"></div>${p.labels[0]} — vlak</div>
         <div class="fkl-item"><div class="fkl-dot" style="background:#f1c40f"></div>${p.labels[1]} — matig</div>
@@ -2904,10 +2921,11 @@ function renderFiche(e, w){
     <div class="fiche-blok">
       <div class="fiche-blok-titel"><span aria-hidden="true">⛰️</span> Hoogteprofiel</div>
       <div class="fiche-profiel-wrap"><canvas id="ficheCanvas"></canvas></div>
-      <div id="fichePrintProfiel"></div>
+      <div id="fichePrintProfiel" style="margin:0;padding:0"></div>
     </div>`:''}
 
-    <!-- TOEGANKELIJKHEID -->
+    <!-- FOTO PRINT (enkel bij afdrukken zichtbaar) -->
+    <div id="fichePrintFotos" style="margin:0;padding:0"></div>
     <div class="fiche-blok">
       <div class="fiche-blok-titel"><span aria-hidden="true">♿</span> Toegankelijkheid</div>
       <div class="fiche-icons-grid">${toegItems}</div>
@@ -3141,29 +3159,65 @@ function ficheGaNaar(idx){
   document.querySelectorAll('.fiche-sdot').forEach((d,i)=>d.classList.toggle('active',i===idx));
 }
 
+async function vernieuwKaartCache(){
+  if(!ficheEtappeID) return;
+  try{
+    await db.etappes.update(ficheEtappeID,{kaartBlob:null});
+    toon('🔄 Cache gewist — kaart wordt opnieuw geladen bij afdrukken');
+  } catch(e){ toon('Fout bij vernieuwen: '+e.message); }
+}
+
 function sluitFiche(){
   document.getElementById('ficheBg').classList.remove('open');
 }
 
 function printFiche(){
-  // Genereer eerst alle print-elementen asynchroon
   const btn=document.querySelector('.fiche-tbtn.print');
-  if(btn){ btn.textContent='⏳ Laden…'; btn.disabled=true; }
+  if(btn){ btn.textContent='⏳ Kaart laden…'; btn.disabled=true; }
 
   Promise.all([
     genereerPrintKaart(),
     genereerPrintProfiel(),
     genereerPrintFotos()
-  ]).finally(()=>{
+  ]).then(()=>{
     if(btn){ btn.textContent='🖨️ Afdrukken'; btn.disabled=false; }
-    document.getElementById('ficheBg').id='fichePrintRoot';
-    window.print();
-    document.getElementById('fichePrintRoot').id='ficheBg';
+    setTimeout(()=>{
+      document.getElementById('ficheBg').id='fichePrintRoot';
+      window.print();
+      setTimeout(()=>{
+        document.getElementById('fichePrintRoot').id='ficheBg';
+      },500);
+    },300);
+  }).catch(err=>{
+    console.error('Print fout:',err);
+    if(btn){ btn.textContent='🖨️ Afdrukken'; btn.disabled=false; }
   });
 }
 
 // ════════ MAPBOX STATIC API VOOR PRINT ════════
-const MAPBOX_TOKEN = 'pk.eyJ1IjoicGF0aC1leHBsb3JlciIsImEiOiJjbHhnZDI1czUwem80MmtyMjFvcm5leGlhIn0.9KQPC0PuDuvirPd44lkCAw';
+// Public token — enkel leesrechten voor Static Images API
+let MAPBOX_TOKEN = localStorage.getItem('nv_mapbox_token') || 'pk.eyJ1IjoicGF0aC1leHBsb3JlciIsImEiOiJjbHhnZDI1czUwem80MmtyMjFvcm5leGlhIn0.9KQPC0PuDuvirPd44lkCAw';
+
+function slaMapboxTokenOp(token){
+  token = token.trim();
+  if(!token){ toon('⚠️ Voer een geldige token in'); return; }
+  localStorage.setItem('nv_mapbox_token', token);
+  MAPBOX_TOKEN = token;
+  toon('✅ Mapbox token opgeslagen');
+  document.getElementById('mapboxTokenWrap').style.display='none';
+  // Knop groen als token aanwezig
+  const btn=document.getElementById('mapboxInstellingBtn');
+  if(btn) btn.style.background='rgba(255,255,255,.12)';
+}
+
+function toonMapboxTokenInvoer(){
+  const wrap = document.getElementById('mapboxTokenWrap');
+  if(!wrap) return;
+  // Vul huidige token in
+  const inp = document.getElementById('mapboxTokenInput');
+  if(inp) inp.value = localStorage.getItem('nv_mapbox_token')||'';
+  wrap.style.display = wrap.style.display==='none'?'flex':'none';
+}
 
 // Encoded polyline helpers (Google format — zelfde als Trail Explorer)
 function encPoly(pts){
@@ -3192,28 +3246,51 @@ function simplify(pts, max){
 
 async function genereerPrintKaart(){
   const wrap = document.getElementById('fichePrintKaart');
-  if(!wrap || !ficheElevData.length){ if(wrap) wrap.innerHTML=''; return; }
+  if(!wrap || !ficheElevData.length){ if(wrap) wrap.innerHTML=''; return Promise.resolve(); }
 
-  wrap.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:220px;color:var(--stone);font-size:13px;gap:8px"><span style="font-size:20px">⏳</span>Kaart laden…</div>';
+  // ── Stap 1: controleer cache in DB ──
+  if(ficheEtappeID){
+    try{
+      const etappe = await db.etappes.get(ficheEtappeID);
+      if(etappe?.kaartBlob){
+        console.log('Mapbox kaart uit cache geladen ✓');
+        const imgUrl = URL.createObjectURL(new Blob([etappe.kaartBlob],{type:'image/png'}));
+        return new Promise(resolve=>{
+          wrap.innerHTML='';
+          const img=document.createElement('img');
+          img.src=imgUrl;
+          img.alt='Kaartoverzicht route';
+          img.style.cssText='display:block;width:100%;height:auto;border-radius:8px';
+          wrap.appendChild(img);
+          img.onload=()=>resolve();
+          img.onerror=()=>resolve();
+        });
+      }
+    } catch(e){ /* cache miss, ga verder met API */ }
+  }
+
+  if(!MAPBOX_TOKEN || MAPBOX_TOKEN==='JOUW_MAPBOX_TOKEN_HIER'){
+    wrap.innerHTML=`<div style="padding:16px;background:#fff8e1;border-radius:8px;font-size:12px;color:#856404;text-align:center;border:1px solid #ffc107">
+      ⚠️ Geen Mapbox token ingesteld.
+    </div>`;
+    return Promise.resolve();
+  }
+
+  wrap.innerHTML='';
 
   const W=1280, H=760;
   const colorHex={'#2ecc71':'2ecc71','#f1c40f':'f1c40f','#e74c3c':'e74c3c'};
 
-  // Bounding box
   const lats=ficheElevData.map(p=>p.lat), lons=ficheElevData.map(p=>p.lon);
   const sw={lat:Math.min(...lats),lng:Math.min(...lons)};
   const ne={lat:Math.max(...lats),lng:Math.max(...lons)};
   const ls=Math.max(ne.lng-sw.lng,0.001), as=Math.max(ne.lat-sw.lat,0.001), m=0.12;
   const bbox=`[${(sw.lng-ls*m).toFixed(6)},${(sw.lat-as*m).toFixed(6)},${(ne.lng+ls*m).toFixed(6)},${(ne.lat+as*m).toFixed(6)}]`;
 
-  // Bouw overlays — zelfde aanpak als Trail Explorer downloadMapA4
   const overlays=[];
+  const haloEnc=encodeURIComponent(encPoly(simplify(ficheElevData,120)));
+  overlays.push(`path-7+ffffff-0.35(${haloEnc})`);
 
-  // Witte halo achtergrond trace
-  const allEnc=encodeURIComponent(encPoly(simplify(ficheElevData,80)));
-  overlays.push(`path-7+ffffff-0.35(${allEnc})`);
-
-  // Gekleurde segmenten per hellingsgraad
   const runs=[]; let i=1;
   while(i<ficheElevData.length){
     const col=ficheGradeColor(ficheElevData[i].grade);
@@ -3221,17 +3298,15 @@ async function genereerPrintKaart(){
     while(i<ficheElevData.length && ficheGradeColor(ficheElevData[i].grade)===col){
       runPts.push(ficheElevData[i]); i++;
     }
-    runs.push({col, pts:runPts});
+    runs.push({col,pts:runPts});
   }
-  const maxPts=runs.length<=20?40:runs.length<=60?20:runs.length<=150?10:6;
+  const maxPts=runs.length<=10?80:runs.length<=20?60:runs.length<=60?30:runs.length<=150?15:8;
   runs.forEach(run=>{
     const simp=simplify(run.pts,maxPts);
     if(simp.length<2) return;
-    const hex=colorHex[run.col]||'2ecc71';
-    overlays.push(`path-4+${hex}(${encodeURIComponent(encPoly(simp))})`);
+    overlays.push(`path-4+${colorHex[run.col]||'2ecc71'}(${encodeURIComponent(encPoly(simp))})`);
   });
 
-  // Km-pins
   const totalDist=ficheElevData[ficheElevData.length-1].dist;
   function ptAtDist(td){
     for(let j=0;j<ficheElevData.length;j++) if(ficheElevData[j].dist>=td) return ficheElevData[j];
@@ -3241,35 +3316,53 @@ async function genereerPrintKaart(){
     const pt=ptAtDist(km);
     overlays.push(`pin-s-${km}+ffffff(${pt.lon.toFixed(5)},${pt.lat.toFixed(5)})`);
   }
-
-  // Start (groen) en eind (rood)
   const sp=ficheElevData[0], ep=ficheElevData[ficheElevData.length-1];
   overlays.push(`pin-s+00c896(${sp.lon.toFixed(5)},${sp.lat.toFixed(5)})`);
   overlays.push(`pin-s+e05252(${ep.lon.toFixed(5)},${ep.lat.toFixed(5)})`);
 
   let url=`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlays.join(',')}/${bbox}/${W}x${H}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
-
-  // URL te lang → verwijder halo
   if(url.length>8000){
     const o2=overlays.filter(o=>!o.includes('+ffffff-0.35'));
     url=`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${o2.join(',')}/${bbox}/${W}x${H}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
   }
 
-  try{
-    const res=await fetch(url);
-    if(!res.ok) throw new Error(`Mapbox HTTP ${res.status}`);
-    const blob=await res.blob();
-    const imgUrl=URL.createObjectURL(blob);
-    const img=document.createElement('img');
-    img.src=imgUrl;
-    img.style.cssText='width:100%;display:block;border-radius:8px';
-    img.alt='Kaartoverzicht route';
-    wrap.innerHTML='';
-    wrap.appendChild(img);
-  } catch(err){
-    console.warn('Mapbox Static API fout:',err);
-    wrap.innerHTML=`<div style="padding:16px;background:#f8f8f8;border-radius:8px;font-size:12px;color:var(--stone);text-align:center">⚠️ Kaart kon niet geladen worden voor print<br><small>${err.message}</small></div>`;
-  }
+  console.log('Mapbox API aanroepen, URL lengte:', url.length);
+
+  return new Promise(async(resolve)=>{
+    try{
+      const res=await fetch(url);
+      if(!res.ok){
+        const txt=await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt}`);
+      }
+      const blob=await res.blob();
+
+      // ── Sla op in DB als cache ──
+      if(ficheEtappeID){
+        try{
+          const buf=await blob.arrayBuffer();
+          await db.etappes.update(ficheEtappeID,{kaartBlob:buf});
+          console.log('Mapbox kaart gecached in DB ✓');
+        } catch(e){ console.warn('Cache opslaan mislukt:',e); }
+      }
+
+      const imgUrl=URL.createObjectURL(blob);
+      wrap.innerHTML='';
+      const img=document.createElement('img');
+      img.src=imgUrl;
+      img.alt='Kaartoverzicht route';
+      img.style.cssText='display:block;width:100%;height:auto;border-radius:8px';
+      wrap.appendChild(img);
+      img.onload=()=>{ console.log('Mapbox kaart geladen ✓'); resolve(); };
+      img.onerror=()=>{ console.warn('Img laad fout'); resolve(); };
+    } catch(err){
+      console.error('Mapbox fout:', err);
+      wrap.innerHTML=`<div style="padding:16px;background:#f8f8f8;border-radius:8px;font-size:12px;color:var(--danger);text-align:center">
+        ⚠️ Kaart kon niet geladen worden<br><small>${err.message}</small>
+      </div>`;
+      resolve();
+    }
+  });
 }
 
 function genereerPrintProfiel(){
@@ -3340,23 +3433,14 @@ function genereerPrintProfiel(){
 
 function genereerPrintFotos(){
   return new Promise(resolve=>{
-    // Enkel de hoofdfoto — altijd 16:9, geen formaat-problemen
-    let wrap = document.getElementById('fichePrintFotos');
-    if(!wrap){
-      wrap = document.createElement('div');
-      wrap.id = 'fichePrintFotos';
-      // Voeg in na de foto blok
-      const fotoBlok = document.getElementById('fichHoofdFotoImg')?.closest('.fiche-blok');
-      if(fotoBlok) fotoBlok.parentNode.insertBefore(wrap, fotoBlok.nextSibling);
-      else { const pg=document.getElementById('fichePage'); if(pg) pg.appendChild(wrap); }
-    }
+    const wrap = document.getElementById('fichePrintFotos');
+    if(!wrap){ resolve(); return; }
     wrap.innerHTML='';
     if(!ficheFotos.length){ resolve(); return; }
     const img=document.createElement('img');
     img.src=blobUrl(ficheFotos[0].blob, ficheFotos[0].type);
     img.alt='Hoofdfoto wandeling';
-    // 16:9 verhouding, volledige breedte
-    img.style.cssText='width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:6px;page-break-inside:avoid';
+    img.style.cssText='width:100%;height:auto;display:block;border-radius:6px;page-break-inside:avoid';
     wrap.appendChild(img);
     resolve();
   });
@@ -3788,6 +3872,17 @@ async function wisDatabase(){
   await vraagPersistentieAan();
   await controleerDataIntegriteit();
   bijwerkExportKnop();
+  // Mapbox knop kleur op basis van token aanwezigheid
+  const btn=document.getElementById('mapboxInstellingBtn');
+  if(btn) btn.style.background=MAPBOX_TOKEN?'rgba(255,255,255,.12)':'rgba(255,160,0,.3)';
+  // Sluit token panel bij klik buiten
+  document.addEventListener('click',e=>{
+    const wrap=document.getElementById('mapboxTokenWrap');
+    const btn=document.getElementById('mapboxInstellingBtn');
+    if(wrap&&btn&&!wrap.contains(e.target)&&!btn.contains(e.target)){
+      wrap.style.display='none';
+    }
+  });
 })();
 </script>
 </body>
